@@ -10,7 +10,7 @@ public class CalabashBroIII extends CalabashBro{
     }
 
     @Override
-    void superfy() {
+    synchronized public void superfy() {
         if(superMode == true)
             return;
 

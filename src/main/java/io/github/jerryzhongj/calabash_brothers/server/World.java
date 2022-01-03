@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -17,6 +18,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Predicate;
 
+import javafx.geometry.Pos;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -27,15 +29,25 @@ public class World implements Serializable{
     private static final long serialVersionUID = 1403870569483406173L;
 
     @AllArgsConstructor
-    public static class Position{
+    static class Position{
         @Getter
-        @Setter
-        double x, y;
+        final double x, y;
 
-        public Position clone(){
-            return new Position(x, y);
+        // public Position clone(){
+        //     return new Position(x, y);
+        // }
+
+        Position add(double deltaX, double deltaY){
+            return new Position(x + deltaX, y + deltaY);
         }
 
+        Position setX(double newX){
+            return new Position(newX, y);
+        }
+
+        Position setY(double newY){
+            return new Position(x, newY);
+        }
         /**
          * 
          * @param pos another position
@@ -49,17 +61,32 @@ public class World implements Serializable{
     }
 
     @AllArgsConstructor
-    public static class Velocity{
+    static class Velocity{
         @Getter
-        @Setter
-        double vx, vy;
-        public Velocity clone(){
-            return new Velocity(vx, vy);
+        final double vx, vy;
+        // public Velocity clone(){
+        //     return new Velocity(vx, vy);
+        // }
+
+        Velocity add(double deltaVx, double deltaVy){
+            return new Velocity( + deltaVx, vy + deltaVy);
+        }
+
+        Velocity setVx(double newVx){
+            return new Velocity(newVx, vy);
+        }
+
+        Velocity setVy(double newVy){
+            return new Velocity(vx, newVy);
         }
     }
 
+    
     enum UpdateOrder{
-        ADD_ENTITY(0), BASIC(1), CALABASH_ACTION(2), CAlABASH_SUPER(3), REMOVE_ENTITY(4), VALIDATION_CHECK(5);
+        // Should start with 0
+        // The later update covers the earlier.
+        // Due to overlaying problem, we have to put adding entity the last one.
+        BASIC(0), CALABASH_ACTION(1), CAlABASH_SUPER(2), REMOVE_ENTITY(3), VALIDATION_CHECK(4), ADD_ENTITY(5);
         @Getter
         final int priority;
         private UpdateOrder(int priority){
@@ -71,15 +98,17 @@ public class World implements Serializable{
     }
 
     enum UpdateType{
-        ONESHOT, FINITE, INFINTE
+        ONESHOT, FINITE, INFINTE, BINDTO
     }
 
-    
-    abstract class Update implements Comparable<Update>{
+    // All changes happen here
+    // New state is computed based on the older one.
+    abstract class Update{
         
         final UpdateType type;
         // TimeUnit: millisecond
         int remain;
+        // TODO: BINDTO
         Update(UpdateType type, int remain){
             this.type = type;
             this.remain = remain;
@@ -87,47 +116,94 @@ public class World implements Serializable{
         Update(UpdateType type){
             this(type, 0);
         }
-        abstract void run();
-        public int compareTo(Update c){
-            return 0;
-        }
+        abstract void update();
+
 
         // Some update utils
+        protected void addVelocity(MovableEntity me, double deltaVx, double deltaVy){
+            Velocity v = newVelocities.get(me);
+            if(v == null){
+                v = getVelocity(me);
+                if(v == null){
+                    // TODO: Log
+                    System.out.printf("Cannot set add v for %s: not found in this world.", me.getName());
+                    return;
+                }
+            }
+            newVelocities.put(me, v.add(deltaVx, deltaVy));
+        }
+
+        protected void setVelocity(MovableEntity me, Velocity newV){
+            newVelocities.put(me, newV);
+        }
+
         protected void setVelocityX(MovableEntity me, double vx){
             Velocity v = newVelocities.get(me);
             if(v == null){
                 v = getVelocity(me);
-                newVelocities.put(me, v);
+                if(v == null){
+                    // TODO: Log
+                    System.out.printf("Cannot set vx for %s: not found in this world.", me.getName());
+                    return;
+                }
             }
-            
-            v.vx = vx;
+            newVelocities.put(me, v.setVx(vx));
         }
 
         protected void setVelocityY(MovableEntity me, double vy){
             Velocity v = newVelocities.get(me);
             if(v == null){
                 v = getVelocity(me);
-                newVelocities.put(me, v);
+                if(v == null){
+                    // TODO: Log
+                    System.out.printf("Cannot set vy for %s: not found in this world.", me.getName());
+                    return;
+                }
             }
-            v.vy = vy;
+            newVelocities.put(me, v.setVx(vy));
         }
 
-        protected void setPositionX(MovableEntity me, double x){
-            Position pos = newPositions.get(me);
-            if(pos == null){
-                pos = getPosition(me);
-                newPositions.put(me, pos);
+        protected void addPosition(MovableEntity me, double deltaX, double deltaY){
+            Position v = newPositions.get(me);
+            if(v == null){
+                v = getPosition(me);
+                if(v == null){
+                    // TODO: Log
+                    System.out.printf("Cannot set add v for %s: not found in this world.", me.getName());
+                    return;
+                }
             }
-            pos.x = x;
+            newPositions.put(me, v.add(deltaX, deltaY));
         }
 
-        protected void setPositionY(MovableEntity me, double y){
-            Position pos = newPositions.get(me);
+        protected void setPosition(Entity e, Position pos){
+            newPositions.put(e, pos);
+        }
+
+        protected void setPositionX(Entity e, double x){
+            Position pos = newPositions.get(e);
             if(pos == null){
-                pos = getPosition(me);
-                newPositions.put(me, pos);
+                pos = getPosition(e);
+                if(pos == null){
+                    // TODO: Log
+                    System.out.printf("Cannot set x for %s: not found in this world.", e.getName());
+                    return;
+                }
             }
-            pos.y = y;
+            newPositions.put(e, pos.setX(x));
+        }
+
+        protected void setPositionY(Entity e, double y){
+            Position pos = newPositions.get(e);
+            if(pos == null){
+                pos = getPosition(e);
+                if(pos == null){
+                    // TODO: Log
+                    System.out.printf("Cannot set x for %s: not found in this world.", e.getName());
+                    return;
+                }
+            }
+            newPositions.put(e, pos.setY(y));
         }
 
         protected void resetVelocity(MovableEntity me){
@@ -138,7 +214,89 @@ public class World implements Serializable{
             newPositions.remove(me);
         }
 
+        protected void addEntity(Entity e, Position pos){
+            if(e instanceof MovableEntity){
+                addEntityWithVelocity((MovableEntity)e, pos, new Velocity(0, 0));
+            }
+
+            if(!hasCollision(e, pos)){
+                setPosition(e, pos);
+                return;
+            }
+            
+            // If it is delecate, destroy it right now
+            if(e instanceof Delicate){
+                removeEntity(e);
+                return;
+            }
+
+            // Slightly move to avoid overlay, should work when overlaying with only one entity.
+            // Try eight directions to find a suitable position.
+            double radius = e.getRadius();
+            Position []newPositions = {pos.add(radius, 0), pos.add(-radius, 0), pos.add(0, radius), pos.add(0, -radius),
+                pos.add(-radius / 1.414, -radius / 1.414), pos.add(-radius / 1.414, radius / 1.414), pos.add(radius / 1.414, -radius / 1.414), pos.add(radius / 1.414, radius / 1.414)};
+            for(Position newPos : newPositions){
+                if(!hasCollision(e, newPos)){
+                    setPosition(e, pos);
+                    return;
+                }
+            }
+
+            // Give up. Try next time...
+            registerUpdate(new Update(UpdateType.ONESHOT){
+                @Override
+                void update() {
+                    addEntity(e, pos);
+                    
+                }
+            }, UpdateOrder.ADD_ENTITY);
+        }
+
+        protected void addEntityWithVelocity(MovableEntity me, Position pos, Velocity v){
+            if(!hasCollision(me, pos)){
+                setPosition(me, pos);
+                setVelocity(me, v);
+                return;
+            }
+            
+            // If it is delicate, destroy it right now
+            if(me instanceof Delicate){
+                removeEntity(me);
+                return;
+            }
+
+            // Slightly move to avoid overlay, should work when overlaying with only one entity.
+            // Try eight directions to find a suitable position.
+            double radius = me.getRadius();
+            Position []newPositions = {pos.add(radius, 0), pos.add(-radius, 0), pos.add(0, radius), pos.add(0, -radius),
+                pos.add(-radius / 1.414, -radius / 1.414), pos.add(-radius / 1.414, radius / 1.414), pos.add(radius / 1.414, -radius / 1.414), pos.add(radius / 1.414, radius / 1.414)};
+            for(Position newPos : newPositions){
+                if(!hasCollision(me, newPos)){
+                    setPosition(me, pos);
+                    setVelocity(me, v);
+                    return;
+                }
+            }
+
+            // Give up. Try next time...
+            registerUpdate(new Update(UpdateType.ONESHOT){
+                @Override
+                void update() {
+                    addEntityWithVelocity(me, pos, v);
+                }
+            }, UpdateOrder.ADD_ENTITY);
+        }
+
+        // e may haven't added to this world yet, in this case this method is used to trigger its destroy program.
+        protected void removeEntity(Entity e){
+            removedEntities.add(e);
+            
+            if(e instanceof CalabashBro)
+                livingCalabash.remove((CalabashBro)e);
+        }
+
     }
+    
     @Getter
     private  Loader loader;
 
@@ -152,14 +310,14 @@ public class World implements Serializable{
     private  Map<Entity, Position> positions = new HashMap<>();
     private  Map<MovableEntity, Velocity> velocities = new HashMap<>();
 
-    // A temporary state when updating
-    private  Map<MovableEntity, Position> newPositions = new HashMap<>();
+    // A temporary state when updating, this should not be visible to others.
+    private  Map<Entity, Position> newPositions = new HashMap<>();
     private  Map<MovableEntity, Velocity> newVelocities = new HashMap<>();
     private  List<Entity> removedEntities = new ArrayList<>();
     
-    // Locks to  
+    // Lock. To keep consistence of the state, considering it as a whole.
     private  ReadWriteLock stateLock = new ReentrantReadWriteLock();
-    private  ReadWriteLock newStateLock = new ReentrantReadWriteLock();
+    
 
     // Update means the change of state
     private  Queue<Update>[] updateQueues = new Queue[UpdateOrder.getTotalNum()];
@@ -185,24 +343,43 @@ public class World implements Serializable{
             Position pos = record.getValue();
             switch(entityName){
                 case "Concrete":
-                    positions.put(new Concrete(this), pos.clone());
+                    positions.put(new Concrete(this), pos);
             }
         }
     }
-    void setPlayers(){
-        ;
+
+    public void setPlayers(){
+        // TODO
+        CalabashBroI broI = new CalabashBroI(this);
+        CalabashBroIII broIII = new CalabashBroIII(this);
+        livingCalabash.add(broI);
+        livingCalabash.add(broIII);
     }
+
     /**
      * set players, register some infinite updates.
      */
-    void ready(){
+    public void ready(){
 
         // TODO: Randomly initial player's position
+
+        for(CalabashBro bro : livingCalabash){
+            velocities.put(bro, new Velocity(0,0));
+            double randomX;
+            double randomY;
+            Position pos;
+            do{
+                randomX = -width + width * 0.5 * Math.random();
+                randomY = height * 0.5 * Math.random();
+                pos = new Position(randomX, randomY);
+            }while(hasCollision(bro, pos));
+            positions.put(bro, pos);
+        }
 
         // Register gravity
         registerUpdate(new Update(World.UpdateType.INFINTE){
             @Override
-            void run() {
+            void update() {
                 for(Map.Entry<MovableEntity, Velocity> entry : velocities.entrySet()){
                     MovableEntity me = entry.getKey();
                     double vy = entry.getValue().vy;
@@ -219,14 +396,12 @@ public class World implements Serializable{
         registerUpdate(new Update(World.UpdateType.INFINTE){
 
             @Override
-            void run() {
+            void update() {
                 for(Map.Entry<MovableEntity, Velocity> entry : velocities.entrySet()){
                     MovableEntity me = entry.getKey();
                     Velocity v = entry.getValue();
                     Position pos = getPosition(me);
-                    
-                    setPositionX(me, pos.x + v.vx / Settings.FPS);
-                    setPositionY(me, pos.y + v.vy / Settings.FPS);
+                    addPosition(me, v.vx / Settings.FPS, v.vy / Settings.FPS);
                     
                 }
             }
@@ -237,110 +412,122 @@ public class World implements Serializable{
         registerUpdate(new Update(World.UpdateType.INFINTE){
 
             @Override
-            void run() {
-                boolean valid = false;
-                while(!valid)
-                    valid = true;
-                    for(MovableEntity candidate : newPositions.keySet()){
+            void update() {
+                
+                LinkedList<MovableEntity> collideEntities = new LinkedList<>();
+                while(!collideEntities.isEmpty()){
+                    
+                    collideEntities.clear();
+
+                    // We assume that last state is valid, then all the collisions are caused by enitities which change their positions.
+                    for(Entity candidate : newPositions.keySet()){
+                        if(!(candidate instanceof MovableEntity))
+                            continue;
+                        
+                        // Removed entities will not be considered.
+                        if(removedEntities.contains(candidate))
+                            continue;
+
                         Position cPos = newPositions.get(candidate);
-                        double cRadius = candidate.getRadius();
-                        for(Entity e : positions.keySet()){
-                            Position pos = newPositions.get(e);
-                            if(pos == null)
-                                pos = positions.get(e);
-                            double dis = pos.disFrom(cPos);
-                            if(dis <= cRadius + e.getRadius() && collide(candidate, e)){
-                                resetPosition(candidate);
-                                setVelocityX(candidate, 0);
-                                setVelocityY(candidate, 0);
-                                if(e instanceof MovableEntity){
-                                    setVelocityX((MovableEntity)e, 0);
-                                    setVelocityY((MovableEntity)e, 0);
-                                }
-                                break;
-                            }
-                                
+                        if(hasCollision(candidate, cPos)){
+                            collideEntities.add((MovableEntity)candidate);
                         }
                     }
+                    for(MovableEntity me : collideEntities){
+                        resetPosition(me);
+                        setVelocity(me, new Velocity(0, 0));
+                        if(me instanceof Delicate){
+                            // Remove delicate entity.
+                            removeEntity(me);
+                        }
+                    }
+                }
+                    
                 
             }
 
         }, World.UpdateOrder.VALIDATION_CHECK); 
     }
 
-    /**
-     * All updates happen here. There is no other way to change the state of the world.
-     */
-    void run(){
-        
-        ThreadPool.scheduled.scheduleAtFixedRate(()->{
-            try{
-                stateLock.readLock().lock();
-                newStateLock.writeLock().lock();
+    
+    // All updates happen here. There is no other way to change the state of the world.
+    // Updates must happen sequently.
+    synchronized private void update(){
+        try{
+            stateLock.readLock().lock();
 
-                newPositions.clear();
-                newVelocities.clear();
-                removedEntities.clear();
-                
-                for(int i = 0;i < UpdateOrder.getTotalNum();i++){
-                    Queue<Update> queue = updateQueues[i];
-                    Iterator<Update> it = queue.iterator();
-                    while(it.hasNext()){
-                        Update update = it.next();
-        
-                        if(update.type == UpdateType.FINITE){
-                            update.remain -= 1000 / 60;
-                        }
-        
-                        if(update.type == UpdateType.ONESHOT || update.type == UpdateType.FINITE && update.remain <= 0){
-                            it.remove();
-                        }
-                        
-                        update.run();
-        
+            newPositions.clear();
+            newVelocities.clear();
+            removedEntities.clear();
+            
+            for(int i = 0;i < UpdateOrder.getTotalNum();i++){
+                Queue<Update> queue = updateQueues[i];
+                Iterator<Update> it = queue.iterator();
+                while(it.hasNext()){
+                    Update update = it.next();
+    
+                    if(update.type == UpdateType.FINITE){
+                        update.remain -= 1000 / 60;
                     }
-                } 
-            }catch(RuntimeException e){
-                throw e;
-            } finally{
-                newStateLock.writeLock().unlock();
-                stateLock.readLock().unlock();
-            }
-
-            
-            // update
-            try{
-                stateLock.writeLock().lock();
-                newStateLock.readLock().lock();
-                for(Map.Entry<MovableEntity, Position> entry : newPositions.entrySet()){
-                    positions.put(entry.getKey(), entry.getValue());
-                }
-            
-                for(Map.Entry<MovableEntity, Velocity> entry : newVelocities.entrySet()){
-                    velocities.put(entry.getKey(), entry.getValue());
-                }
-
-                // remove enities;
-                for(Entity e:removedEntities){
-                    positions.remove(e);
-                    if(e instanceof MovableEntity){
-                        velocities.remove((MovableEntity)e);
+    
+                    if(update.type == UpdateType.ONESHOT || update.type == UpdateType.FINITE && update.remain <= 0){
+                        it.remove();
                     }
+                    
+                    update.update();
+    
                 }
-            }catch(RuntimeException e){
-                throw e;
-            }finally{
-                newStateLock.readLock().unlock();
-                stateLock.writeLock().unlock();
-            }
-
+            } 
+        }catch(RuntimeException e){
+            throw e;
+        } finally{
             
+            stateLock.readLock().unlock();
+        }
 
-            if(livingCalabash.size() == 1){
-                // TODO: End this world
+        
+        // Do Update
+        try{
+            stateLock.writeLock().lock();
+            
+            for(Map.Entry<Entity, Position> entry : newPositions.entrySet()){
+                positions.put(entry.getKey(), entry.getValue());
             }
-              
-        }, 0, 1000 / Settings.FPS, TimeUnit.MILLISECONDS);
+        
+            for(Map.Entry<MovableEntity, Velocity> entry : newVelocities.entrySet()){
+                velocities.put(entry.getKey(), entry.getValue());
+            }
+
+            // Remove enities;
+            for(Entity e:removedEntities){
+                positions.remove(e);
+                if(e instanceof MovableEntity){
+                    velocities.remove((MovableEntity)e);
+                }
+
+                if(e instanceof Destroyable){
+                    ((Destroyable)e).destroy();
+                }
+
+                // TODO: Remove events that bind to this entity.
+            }
+        }catch(RuntimeException e){
+            throw e;
+        }finally{
+            
+            stateLock.writeLock().unlock();
+        }
+
+        
+
+        if(livingCalabash.size() == 1){
+            // TODO: End this world
+        }
+    }
+    
+    public void resume(){
+        
+        ThreadPool.scheduled.scheduleAtFixedRate(() -> update(), 0, 1000 / Settings.FPS, TimeUnit.MILLISECONDS);
     }
 
     void stop(){
@@ -354,23 +541,11 @@ public class World implements Serializable{
     /**
      * @param a Entity A
      * @param b Entity B
-     * @return whether they collide
+     * @param posA Specfied A's position, it maybe not the fact.
+     * @param posB Specfied B's position
+     * @return whether A and B collide at the specified position. Theses
      */
-    boolean collide(Entity a, Entity b){
-        Position posA = null;
-        Position posB = null;
-        try{
-            stateLock.readLock().lock();
-            posA = positions.get(a);
-            posB = positions.get(b);
-        }catch(RuntimeException e){
-            throw e;
-        }finally{
-            stateLock.readLock().unlock();
-        }
-        
-        if(posA == null || posB == null)
-            throw new RuntimeException("No such entity in positions");
+    private boolean collide(Entity a, Position posA, Entity b, Position posB){
         
         int [][]boundA = a.getBoundary();
         int [][]boundB = b.getBoundary();
@@ -386,10 +561,34 @@ public class World implements Serializable{
 
     /**
      * 
-     * @param me
-     * @return the COPY velocity of specified entity.
+     * @param e
+     * @return true if there is collision with e at specified position. Removed entity will not be considered.
      */
-    protected Velocity getVelocity(MovableEntity me){
+    private boolean hasCollision(Entity e, Position pos){
+        for(Entity e2 : positions.keySet()){
+
+            if(removedEntities.contains(e2))
+                continue;
+
+            Position pos2 = newPositions.get(e);
+            if(pos2 == null)
+                pos2 = getPosition(e2);
+            double radius = e.getRadius();
+            double dis = pos2.disFrom(pos);
+            if(dis <= radius + e2.getRadius() && collide(e, pos, e2, pos2)){
+                return true;
+            }
+                
+        }
+        return false;
+    }
+
+    /**
+     * 
+     * @param me
+     * @return null if no such entity.
+     */
+    Velocity getVelocity(Entity me){
 
         Velocity v = null;
         try{
@@ -402,18 +601,16 @@ public class World implements Serializable{
             stateLock.readLock().unlock();
         }
 
-        if(v == null)
-            throw new RuntimeException("No such movable enitity in velocities");
-        return v.clone();
+        return v;
     }
 
 
     /**
      * 
      * @param me
-     * @return the COPY position of specified entity.
+     * @return null if no such entity
      */
-    protected Position getPosition(MovableEntity me){
+    Position getPosition(Entity me){
 
         Position pos = null;
         try{
@@ -426,9 +623,7 @@ public class World implements Serializable{
             stateLock.readLock().unlock();
         }
 
-        if(pos == null)
-            throw new RuntimeException("No such movable enitity in velocities");
-        return pos.clone();
+        return pos;
     }
 
     /**
@@ -437,28 +632,20 @@ public class World implements Serializable{
      * @param condition in what area
      * @return
      */
-    protected Set<Entity> getEntityAround(Entity e, Predicate<Position> condition){
+    Set<Entity> getEntityAround(Entity e, Predicate<Position> condition){
         Position ePos = null;
         Set<Entity> result = new HashSet<>();
 
-        try{
-            stateLock.readLock().lock();
-            ePos = positions.get(e);
-            
-        }catch(RuntimeException exception){
-            throw exception;
-        }finally{
-            stateLock.readLock().unlock();
-        }   
+        ePos = getPosition(e);
 
-        if(ePos == null)
-                throw new RuntimeException("No such entity in positions");
+        if(ePos != null){
             for(Map.Entry<Entity, Position> entry : positions.entrySet()){
                 Position pos = entry.getValue();
                 if(condition.test(new Position(pos.x - ePos.x, pos.y - ePos.y))){
                     result.add(entry.getKey());
                 }
             }
+        }
         return result;
     }
 }

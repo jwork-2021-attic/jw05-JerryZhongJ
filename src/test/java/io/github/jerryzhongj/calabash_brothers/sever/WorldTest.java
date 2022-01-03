@@ -12,13 +12,20 @@ import io.github.jerryzhongj.calabash_brothers.server.World;
  */
 public class WorldTest 
 {
-    /**
-     * Rigorous Test :-)
-     */
+    
     @Test
     public void testLoadWorld()
     {
         Loader loader = new Loader();
         World world = loader.loadInitialWorld("simple");
+        world.setPlayers();
+        world.ready();
+        world.resume();
+        try {
+            Thread.sleep(100000);
+        } catch (InterruptedException e) {
+            // TODO Auto-generated catch block
+            
+        }
     }
 }

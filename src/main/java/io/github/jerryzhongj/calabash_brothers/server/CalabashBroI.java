@@ -10,7 +10,7 @@ class CalabashBroI extends CalabashBro{
     }
 
     @Override
-    void superfy() {
+    public void superfy() {
         ;
         
     }

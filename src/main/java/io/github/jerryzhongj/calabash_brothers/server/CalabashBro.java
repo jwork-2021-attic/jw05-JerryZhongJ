@@ -21,14 +21,16 @@ abstract class CalabashBro extends MovableEntity{
         //TODO Auto-generated constructor stub
     }
 
-    // for World
-    void hurt(double hurt){
-        hp -= hurt * protectFactor;
-    }
-    double getDamage(){
+    private double getDamage(){
         return Settings.DEFAULT_DAMAGE * buff;
     }
-    boolean isAlive(){
+
+    // for World
+    synchronized public void hurt(double hurt){
+        hp -= hurt * protectFactor;
+    }
+    
+    public boolean isAlive(){
         return hp > 0;
     }
     // for Controller
@@ -47,7 +49,7 @@ abstract class CalabashBro extends MovableEntity{
                 world.registerUpdate(world.new Update(World.UpdateType.ONESHOT){
 
                     @Override
-                    void run() {
+                    void update() {
                         setVelocityX(bro, Settings.GET_PUNCH_VELOCITY_X * (facing?1:-1));
                         setVelocityY(bro, Settings.GET_PUNCH_VELOCITY_Y);
                     }
@@ -58,48 +60,48 @@ abstract class CalabashBro extends MovableEntity{
 
     }
 
-    void moveLeft(){
+    public void moveLeft(){
         facing = false;
         world.registerUpdate(world.new Update(World.UpdateType.ONESHOT) {
             @Override
-            void run() {
+            void update() {
                 setVelocityX(CalabashBro.this, -speed);
             }
             
         }, World.UpdateOrder.CALABASH_ACTION);
     }
 
-    void moveRight(){
+    public void moveRight(){
         facing = true;
         world.registerUpdate(world.new Update(World.UpdateType.ONESHOT) {
             @Override
-            void run() {
+            void update() {
                 setVelocityX(CalabashBro.this, speed);
             }
             
         }, World.UpdateOrder.CALABASH_ACTION);
     }
 
-    void jump(){
+    public void jump(){
         world.registerUpdate(world.new Update(World.UpdateType.ONESHOT) {
             @Override
-            void run() {
+            void update() {
                 setVelocityY(CalabashBro.this, speed);
             }
             
         }, World.UpdateOrder.CALABASH_ACTION);
     }
 
-    void stop(){
+    public void stop(){
         world.registerUpdate(world.new Update(World.UpdateType.ONESHOT) {
             @Override
-            void run() {
+            void update() {
                 setVelocityX(CalabashBro.this, 0);
             }
             
         }, World.UpdateOrder.CALABASH_ACTION);
     }
 
-    abstract void superfy();
+    abstract public void superfy();
 
 }
