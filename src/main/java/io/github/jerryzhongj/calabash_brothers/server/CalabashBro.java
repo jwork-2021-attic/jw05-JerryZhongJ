@@ -2,7 +2,10 @@ package io.github.jerryzhongj.calabash_brothers.server;
 
 import java.util.Set;
 
+import io.github.jerryzhongj.calabash_brothers.server.World.UpdateOrder;
+import io.github.jerryzhongj.calabash_brothers.server.World.UpdateType;
 import lombok.Getter;
+
 
 abstract class CalabashBro extends MovableEntity{
     @Getter
@@ -16,8 +19,8 @@ abstract class CalabashBro extends MovableEntity{
     protected boolean facing = false;
     protected boolean superMode = false;
 
-    CalabashBro(World world, String number) {
-        super(world, "Calabash Brother " + number, Settings.CALABASH_HEIGHT, Settings.CALABASH_WIDTH);
+    CalabashBro(World world, String name) {
+        super(world, name, Settings.CALABASH_HEIGHT, Settings.CALABASH_WIDTH);
         //TODO Auto-generated constructor stub
     }
 
@@ -26,8 +29,18 @@ abstract class CalabashBro extends MovableEntity{
     }
 
     // for World
-    synchronized public void hurt(double hurt){
-        hp -= hurt * protectFactor;
+    synchronized public void hurt(double damage){
+        hp -= damage * protectFactor;
+        if(hp <= 0){
+            // TODO: add corpe
+            world.registerUpdate(world.new Update(UpdateType.ONESHOT){
+                @Override
+                void update() {
+                    removeEntity(CalabashBro.this);
+                }
+                
+            }, UpdateOrder.REMOVE_ENTITY);
+        }
     }
     
     public boolean isAlive(){

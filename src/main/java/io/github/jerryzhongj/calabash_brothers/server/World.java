@@ -19,10 +19,12 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Predicate;
 
+import io.github.jerryzhongj.calabash_brothers.EntityType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
+import io.github.jerryzhongj.calabash_brothers.EntityType;
 // 这个世界是连续的，以像素为长度单位
 // 坐标以地面的中心为原点
 public class World implements Serializable{
@@ -148,6 +150,7 @@ public class World implements Serializable{
         }
 
         protected void setVelocityX(MovableEntity me, double vx){
+            World world = World.this;
             Velocity v = newVelocities.get(me);
             if(v == null){
                 v = getVelocity(me);
@@ -360,14 +363,25 @@ public class World implements Serializable{
         
     }
 
-    public void setPlayers(){
-        // TODO
-        CalabashBroI broI = new CalabashBroI(this);
-        CalabashBroIII broIII = new CalabashBroIII(this);
-        livingCalabash.add(broI);
-        livingCalabash.add(broIII);
+    public void setPlayers(Player []players){
+        for(Player player : players){
+            CalabashBro bro = null;
+            String name = player.getName();
+            switch(player.getCalabashType()){
+                case EntityType.CALABASH_BRO_I:
+                    bro = new CalabashBroI(this, name);
+                    break;
+                case EntityType.CALABASH_BRO_III:
+                    bro = new CalabashBroIII(this, name);
+                default:
+                    continue;
+            }
+            player.control(bro);
+            livingCalabash.add(bro);
+        }
     }
 
+    
     /**
      * set players, register some infinite updates.
      */
@@ -378,6 +392,7 @@ public class World implements Serializable{
             return;
         }
 
+        
         for(CalabashBro bro : livingCalabash){
             velocities.put(bro, new Velocity(0,0));
             double randomX;
@@ -443,7 +458,10 @@ public class World implements Serializable{
                             continue;
 
                         Position pos = newPositions.get(candidate);
-                        Velocity v = getVelocity(candidate);        // New positions are calculated based on old velocity;
+                        Velocity v = newVelocities.get(candidate);
+                        if(v == null)
+                            v = getVelocity(candidate);
+
                         //T B R L
                         int collision = getCollision(candidate, pos);
                         boolean reset = false;
@@ -489,14 +507,17 @@ public class World implements Serializable{
 
         status = WorldStatus.READY;
     }
-
     
     // All updates happen here. There is no other way to change the state of the world.
     // Updates must happen sequently.
-    synchronized private void update(){
-        
+    private void update(){
+        if(status != WorldStatus.RUNNING)
+            return;
+
         try{
             stateLock.readLock().lock();
+
+            
 
             newPositions.clear();
             newVelocities.clear();
@@ -521,7 +542,8 @@ public class World implements Serializable{
     
                 }
             } 
-        }catch(RuntimeException e){
+        }catch(Exception e){
+            e.printStackTrace();
             throw e;
         } finally{
             
@@ -554,7 +576,8 @@ public class World implements Serializable{
 
                 // TODO: Remove events that bind to this entity.
             }
-        }catch(RuntimeException e){
+        }catch(Exception e){
+            e.printStackTrace();
             throw e;
         }finally{
             
@@ -568,10 +591,12 @@ public class World implements Serializable{
             end();
         }
 
-        // DEBUG
-        for(CalabashBro calabash : livingCalabash){
-            System.out.printf("%s\tpos: %s\tv: %s\thp: %.1f\n", calabash.getName(), positions.get(calabash).toString(), velocities.get(calabash).toString(), calabash.getHp());
-        }
+        // // DEBUG
+        // for(CalabashBro calabash : livingCalabash){
+        //     System.out.printf("%s\tpos: %s\t\tv: %s\t\thp: %.1f\n", calabash.getName(), positions.get(calabash).toString(), velocities.get(calabash).toString(), calabash.getHp());
+        // }
+       
+        
         // for(Map.Entry<Entity, Position> entry : positions.entrySet()){
         //     System.out.printf("%s\tpos: %s\n", entry.getKey().getName(), entry.getValue().toString());
         // }
@@ -587,7 +612,7 @@ public class World implements Serializable{
         running = ThreadPool.scheduled.scheduleAtFixedRate(() -> {
             // TODO: exception handler
             try{
-                this.update();
+                update();
             }catch(RuntimeException e){
                 e.printStackTrace();
             }
@@ -629,10 +654,10 @@ public class World implements Serializable{
         double deltaY = Math.abs(posA.y - posB.y);
         double leastX = (a.getWidth() + b.getWidth()) / 2;
         double leastY = (a.getHeight() + b.getHeight()) / 2;
-        double x = deltaX - leastX;
-        double y = deltaY - leastY;
-        if(x <= 0 && y <= 0){
-            if(x * leastY < y * leastX){
+        double x = leastX - deltaX;
+        double y = leastY - deltaY;
+        if(x >= 0 && y >= 0){
+            if(x  > y){
                 // more inside in x-direction
                 // Top or Bottome
                 if(posA.y < posB.y)
@@ -654,6 +679,8 @@ public class World implements Serializable{
     private int getCollision(Entity e, Position pos){
         int collision = 0;
         for(Entity e2 : positions.keySet()){
+            if(e2 == e)
+                continue;
 
             if(removedEntities.contains(e2))
                 continue;
@@ -684,7 +711,7 @@ public class World implements Serializable{
             stateLock.readLock().lock();
             v = velocities.get(me);
             
-        }catch(RuntimeException e){
+        }catch(Exception e){
             throw e;
         }finally{
             stateLock.readLock().unlock();
@@ -706,7 +733,7 @@ public class World implements Serializable{
             stateLock.readLock().lock();
             pos = positions.get(me);
             
-        }catch(RuntimeException e){
+        }catch(Exception e){
             throw e;
         }finally{
             stateLock.readLock().unlock();
@@ -724,17 +751,25 @@ public class World implements Serializable{
     Set<Entity> getEntityAround(Entity e, Predicate<Position> condition){
         Position ePos = null;
         Set<Entity> result = new HashSet<>();
+        try{
+            stateLock.readLock().lock();
+            ePos = positions.get(e);
 
-        ePos = getPosition(e);
-
-        if(ePos != null){
-            for(Map.Entry<Entity, Position> entry : positions.entrySet()){
-                Position pos = entry.getValue();
-                if(condition.test(new Position(pos.x - ePos.x, pos.y - ePos.y))){
-                    result.add(entry.getKey());
+            if(ePos != null){
+                for(Map.Entry<Entity, Position> entry : positions.entrySet()){
+                    Position pos = entry.getValue();
+                    Entity entity = entry.getKey();
+                    if(entity != e && condition.test(new Position(pos.x - ePos.x, pos.y - ePos.y))){
+                        result.add(entry.getKey());
+                    }
                 }
             }
+        }catch(Exception re){
+            throw re;
+        }finally{
+            stateLock.readLock().unlock();
         }
+        
         return result;
     }
 }

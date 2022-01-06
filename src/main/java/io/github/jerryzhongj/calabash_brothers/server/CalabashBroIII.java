@@ -4,8 +4,8 @@ import java.util.concurrent.TimeUnit;
 
 public class CalabashBroIII extends CalabashBro{
 
-    CalabashBroIII(World world) {
-        super(world, "III");
+    CalabashBroIII(World world, String name) {
+        super(world, name);
         protectFactor = Settings.BRO_III_INITIAL_PROTECT;
     }
 

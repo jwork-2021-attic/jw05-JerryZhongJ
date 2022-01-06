@@ -34,9 +34,4 @@ public class ResponseProtocol {
     public static final byte WIN = 0xb;
 
     public static final byte LOSE = 0xc;
-
-    // Type
-    public static final byte TYPE_BRO_I = 0x1;
-    public static final byte TYPE_BRO_III = 0x3;
-    public static final byte TYPE_CONCRETE = 0x10;
 }

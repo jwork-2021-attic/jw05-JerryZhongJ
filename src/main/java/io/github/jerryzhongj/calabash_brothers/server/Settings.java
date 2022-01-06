@@ -12,14 +12,14 @@ class Settings {
     static final double BOUNDARY_LONG = 20;
 
     static final double GRAVITY = 10;
-    static final double MAX_FALL_SPEED = 30;
+    static final double MAX_FALL_SPEED = 50;
 
     static final double DEFAULT_SPEED = 20;
     static final double INITIAL_HP = 100;
     static final double DEFAULT_DAMAGE = 10;   
     
-    static final double ATTACK_HEIGHT = 20;
-    static final double ATTACK_LENGTH = 50;
+    static final double ATTACK_HEIGHT = 10;
+    static final double ATTACK_LENGTH = 20;
     static final double GET_PUNCH_VELOCITY_X = 10;
     static final double GET_PUNCH_VELOCITY_Y = 10;
     

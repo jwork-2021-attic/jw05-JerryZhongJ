@@ -49,7 +49,7 @@ public class Server {
 
         World world = loader.loadInitialWorld("default");
         // TODO
-        world.setPlayers();
+        world.setPlayers(players.toArray(new Player[players.size()]));
         world.ready();
         world.resume();
     }
