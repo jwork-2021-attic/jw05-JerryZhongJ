@@ -13,12 +13,12 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Predicate;
 
-import javafx.geometry.Pos;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -27,6 +27,11 @@ import lombok.Setter;
 // 坐标以地面的中心为原点
 public class World implements Serializable{
     private static final long serialVersionUID = 1403870569483406173L;
+
+    enum WorldStatus{
+        // END means the game finish, however STOP means world was forcely stop.
+        SETUP, READY, RUNNING, END
+    }
 
     @AllArgsConstructor
     static class Position{
@@ -58,15 +63,16 @@ public class World implements Serializable{
             double deltaY = pos.y - y;
             return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
         }
+
+        public String toString(){
+            return String.format("(%.2f, %.2f)", x, y);
+        }
     }
 
     @AllArgsConstructor
     static class Velocity{
         @Getter
         final double vx, vy;
-        // public Velocity clone(){
-        //     return new Velocity(vx, vy);
-        // }
 
         Velocity add(double deltaVx, double deltaVy){
             return new Velocity( + deltaVx, vy + deltaVy);
@@ -79,9 +85,13 @@ public class World implements Serializable{
         Velocity setVy(double newVy){
             return new Velocity(vx, newVy);
         }
+
+        public String toString(){
+            return String.format("(%.2f, %.2f)", vx, vy);
+        }
+
     }
 
-    
     enum UpdateOrder{
         // Should start with 0
         // The later update covers the earlier.
@@ -160,21 +170,21 @@ public class World implements Serializable{
                     return;
                 }
             }
-            newVelocities.put(me, v.setVx(vy));
+            newVelocities.put(me, v.setVy(vy));
         }
 
-        protected void addPosition(MovableEntity me, double deltaX, double deltaY){
-            Position v = newPositions.get(me);
-            if(v == null){
-                v = getPosition(me);
-                if(v == null){
-                    // TODO: Log
-                    System.out.printf("Cannot set add v for %s: not found in this world.", me.getName());
-                    return;
-                }
-            }
-            newPositions.put(me, v.add(deltaX, deltaY));
-        }
+        // protected void addPosition(MovableEntity me, double deltaX, double deltaY){
+        //     Position v = newPositions.get(me);
+        //     if(v == null){
+        //         v = getPosition(me);
+        //         if(v == null){
+        //             // TODO: Log
+        //             System.out.printf("Cannot set add v for %s: not found in this world.", me.getName());
+        //             return;
+        //         }
+        //     }
+        //     newPositions.put(me, v.add(deltaX, deltaY));
+        // }
 
         protected void setPosition(Entity e, Position pos){
             newPositions.put(e, pos);
@@ -206,14 +216,6 @@ public class World implements Serializable{
             newPositions.put(e, pos.setY(y));
         }
 
-        protected void resetVelocity(MovableEntity me){
-            newVelocities.remove(me);
-        }
-
-        protected void resetPosition(MovableEntity me){
-            newPositions.remove(me);
-        }
-
         protected void addEntity(Entity e, Position pos){
             if(e instanceof MovableEntity){
                 addEntityWithVelocity((MovableEntity)e, pos, new Velocity(0, 0));
@@ -232,9 +234,10 @@ public class World implements Serializable{
 
             // Slightly move to avoid overlay, should work when overlaying with only one entity.
             // Try eight directions to find a suitable position.
-            double radius = e.getRadius();
-            Position []newPositions = {pos.add(radius, 0), pos.add(-radius, 0), pos.add(0, radius), pos.add(0, -radius),
-                pos.add(-radius / 1.414, -radius / 1.414), pos.add(-radius / 1.414, radius / 1.414), pos.add(radius / 1.414, -radius / 1.414), pos.add(radius / 1.414, radius / 1.414)};
+            double w = e.getWidth();
+            double h = e.getHeight();
+            Position []newPositions = {pos.add(-w, 0), pos.add(+w, 0), pos.add(0, -h), pos.add(0, +h),
+                pos.add(-w, -h), pos.add(-w, h), pos.add(w, -h), pos.add(w, h)};
             for(Position newPos : newPositions){
                 if(!hasCollision(e, newPos)){
                     setPosition(e, pos);
@@ -267,9 +270,10 @@ public class World implements Serializable{
 
             // Slightly move to avoid overlay, should work when overlaying with only one entity.
             // Try eight directions to find a suitable position.
-            double radius = me.getRadius();
-            Position []newPositions = {pos.add(radius, 0), pos.add(-radius, 0), pos.add(0, radius), pos.add(0, -radius),
-                pos.add(-radius / 1.414, -radius / 1.414), pos.add(-radius / 1.414, radius / 1.414), pos.add(radius / 1.414, -radius / 1.414), pos.add(radius / 1.414, radius / 1.414)};
+            double w = me.getWidth();
+            double h = me.getHeight();
+            Position []newPositions = {pos.add(-w, 0), pos.add(+w, 0), pos.add(0, -h), pos.add(0, +h),
+                pos.add(-w, -h), pos.add(-w, h), pos.add(w, -h), pos.add(w, h)};
             for(Position newPos : newPositions){
                 if(!hasCollision(me, newPos)){
                     setPosition(me, pos);
@@ -300,11 +304,15 @@ public class World implements Serializable{
     @Getter
     private  Loader loader;
 
+    private WorldStatus status = WorldStatus.SETUP;
+
+    private ScheduledFuture<?> running = null;
+
     // Info
     @Setter
-    private double width;
+    private double width = 0;
     @Setter
-    private double height;
+    private double height = 0;
 
     // A state of the world consists of positions and velocities
     private  Map<Entity, Position> positions = new HashMap<>();
@@ -322,7 +330,7 @@ public class World implements Serializable{
     // Update means the change of state
     private  Queue<Update>[] updateQueues = new Queue[UpdateOrder.getTotalNum()];
     
-    private Set<CalabashBro> livingCalabash = new HashSet<>();
+    private List<CalabashBro> livingCalabash = new LinkedList<>();
 
     public World(Loader loader) {
         this.loader = loader;
@@ -337,15 +345,19 @@ public class World implements Serializable{
      * 
      * @param map consists of unmovable entity, including the boundary of this world.
      */
-    void setMap(Map<String, Position> map){
-        for(Map.Entry<String, Position> record : map.entrySet()){
-            String entityName = record.getKey();
-            Position pos = record.getValue();
-            switch(entityName){
-                case "Concrete":
-                    positions.put(new Concrete(this), pos);
-            }
+    void setMap(String entityName, Position pos){
+        switch(entityName){
+            case "Concrete":
+                positions.put(new Concrete(this), pos);
+                break;
+            case "Vertical Boundary":
+                positions.put(new VerticalBoundary(this), pos);
+                break;
+            case "Horizontal Boundary":
+                positions.put(new HorizontalBoundary(this), pos);
+                break;
         }
+        
     }
 
     public void setPlayers(){
@@ -361,7 +373,10 @@ public class World implements Serializable{
      */
     public void ready(){
 
-        // TODO: Randomly initial player's position
+        if(width == 0 || height == 0 || positions.isEmpty() || livingCalabash.isEmpty()){
+            System.out.println("Setup not finished!");
+            return;
+        }
 
         for(CalabashBro bro : livingCalabash){
             velocities.put(bro, new Velocity(0,0));
@@ -369,7 +384,7 @@ public class World implements Serializable{
             double randomY;
             Position pos;
             do{
-                randomX = -width + width * 0.5 * Math.random();
+                randomX = -width / 2 + width * 0.5 * Math.random();
                 randomY = height * 0.5 * Math.random();
                 pos = new Position(randomX, randomY);
             }while(hasCollision(bro, pos));
@@ -384,7 +399,7 @@ public class World implements Serializable{
                     MovableEntity me = entry.getKey();
                     double vy = entry.getValue().vy;
                     if(vy >= -Settings.MAX_FALL_SPEED){
-                        vy -= Settings.GRAVITY / Settings.FPS;
+                        vy -= Settings.GRAVITY / Settings.UPDATE_RATE;
                         setVelocityY(me, vy);
                     }    
                 }
@@ -401,7 +416,8 @@ public class World implements Serializable{
                     MovableEntity me = entry.getKey();
                     Velocity v = entry.getValue();
                     Position pos = getPosition(me);
-                    addPosition(me, v.vx / Settings.FPS, v.vy / Settings.FPS);
+                    Position newPosition = new Position(pos.x + v.vx / Settings.UPDATE_RATE, pos.y + v.vy / Settings.UPDATE_RATE);
+                    setPosition(me, newPosition);
                     
                 }
             }
@@ -415,44 +431,70 @@ public class World implements Serializable{
             void update() {
                 
                 LinkedList<MovableEntity> collideEntities = new LinkedList<>();
-                while(!collideEntities.isEmpty()){
-                    
+                do{
                     collideEntities.clear();
 
                     // We assume that last state is valid, then all the collisions are caused by enitities which change their positions.
                     for(Entity candidate : newPositions.keySet()){
                         if(!(candidate instanceof MovableEntity))
                             continue;
-                        
                         // Removed entities will not be considered.
                         if(removedEntities.contains(candidate))
                             continue;
 
-                        Position cPos = newPositions.get(candidate);
-                        if(hasCollision(candidate, cPos)){
-                            collideEntities.add((MovableEntity)candidate);
+                        Position pos = newPositions.get(candidate);
+                        Velocity v = getVelocity(candidate);        // New positions are calculated based on old velocity;
+                        //T B R L
+                        int collision = getCollision(candidate, pos);
+                        boolean reset = false;
+                        if((collision & 1) != 0 && v.vx < 0){
+                            setVelocityX((MovableEntity)candidate, 0);
+                            reset = true;
                         }
+                        if((collision & 2) != 0 && v.vx > 0){
+                            setVelocityX((MovableEntity)candidate, 0);
+                            reset = true;
+                        }
+                        if((collision & 4) != 0 && v.vy < 0){
+                            setVelocityY((MovableEntity)candidate, 0);
+                            reset = true;
+                        }
+                        if((collision & 8) != 0 && v.vy > 0){
+                            setVelocityY((MovableEntity)candidate, 0);
+                            reset = true;
+                        }
+
+                        if(reset)
+                            collideEntities.add((MovableEntity)candidate);
                     }
+
+                    // Reset position based on changed velocity
                     for(MovableEntity me : collideEntities){
-                        resetPosition(me);
-                        setVelocity(me, new Velocity(0, 0));
+                        Velocity v = newVelocities.get(me);
+                        Position pos = getPosition(me);
+                        Position newPosition = new Position(pos.x + v.vx / Settings.UPDATE_RATE, pos.y + v.vy / Settings.UPDATE_RATE);
+                        setPosition(me, newPosition);
+
                         if(me instanceof Delicate){
                             // Remove delicate entity.
                             removeEntity(me);
                         }
                     }
-                }
+                }while(!collideEntities.isEmpty());
                     
                 
             }
 
         }, World.UpdateOrder.VALIDATION_CHECK); 
+
+        status = WorldStatus.READY;
     }
 
     
     // All updates happen here. There is no other way to change the state of the world.
     // Updates must happen sequently.
     synchronized private void update(){
+        
         try{
             stateLock.readLock().lock();
 
@@ -461,13 +503,14 @@ public class World implements Serializable{
             removedEntities.clear();
             
             for(int i = 0;i < UpdateOrder.getTotalNum();i++){
+
                 Queue<Update> queue = updateQueues[i];
                 Iterator<Update> it = queue.iterator();
                 while(it.hasNext()){
                     Update update = it.next();
     
                     if(update.type == UpdateType.FINITE){
-                        update.remain -= 1000 / 60;
+                        update.remain -= 1000 / Settings.UPDATE_RATE;
                     }
     
                     if(update.type == UpdateType.ONESHOT || update.type == UpdateType.FINITE && update.remain <= 0){
@@ -517,70 +560,116 @@ public class World implements Serializable{
             
             stateLock.writeLock().unlock();
         }
-
         
-
+        // Only one character left, end this world.
+       
         if(livingCalabash.size() == 1){
-            // TODO: End this world
+            System.out.printf("%s win\n", livingCalabash.get(0).getName());
+            end();
         }
+
+        // DEBUG
+        for(CalabashBro calabash : livingCalabash){
+            System.out.printf("%s\tpos: %s\tv: %s\thp: %.1f\n", calabash.getName(), positions.get(calabash).toString(), velocities.get(calabash).toString(), calabash.getHp());
+        }
+        // for(Map.Entry<Entity, Position> entry : positions.entrySet()){
+        //     System.out.printf("%s\tpos: %s\n", entry.getKey().getName(), entry.getValue().toString());
+        // }
+
     }
     
     public void resume(){
+        if(status != WorldStatus.READY){
+            System.out.println("This world is not ready!");
+            return;
+        }
         
-        ThreadPool.scheduled.scheduleAtFixedRate(() -> update(), 0, 1000 / Settings.FPS, TimeUnit.MILLISECONDS);
+        running = ThreadPool.scheduled.scheduleAtFixedRate(() -> {
+            // TODO: exception handler
+            try{
+                this.update();
+            }catch(RuntimeException e){
+                e.printStackTrace();
+            }
+            
+        }, 0, 1000 / Settings.UPDATE_RATE, TimeUnit.MILLISECONDS);
+        
     }
 
-    void stop(){
-        // TODO 
+    public void pause(){
+        if(status != WorldStatus.RUNNING){
+            System.out.println("This world is not running!");
+            return;
+        }
+        running.cancel(false);
+        running = null;
+        status = WorldStatus.READY;
+    }
+
+    private void end(){
+        if(status != WorldStatus.RUNNING){
+            System.out.println("This world is not running!");
+            return;
+        }
+        running.cancel(false);
+        running = null;
+        status = WorldStatus.END;
     }
 
     void registerUpdate(Update e, UpdateOrder order){
         updateQueues[order.getPriority()].add(e);
     }
 
-    /**
-     * @param a Entity A
-     * @param b Entity B
-     * @param posA Specfied A's position, it maybe not the fact.
-     * @param posB Specfied B's position
-     * @return whether A and B collide at the specified position. Theses
-     */
-    private boolean collide(Entity a, Position posA, Entity b, Position posB){
-        
-        int [][]boundA = a.getBoundary();
-        int [][]boundB = b.getBoundary();
-        for(int []coordA : boundA){
-            for(int []coordB : boundB){
-                if(Math.abs(coordB[0] - coordA[0] + posB.x - posA.x) < 1 &&
-                   Math.abs(coordB[1] - coordA[1] + posB.y - posA.y) < 1)
-                    return true;
+    
+     // return the direction A and B collide (from A's view) at the specified position.
+     // T B R L
+     // We assume that all entities are rectangular
+    private int collide(Entity a, Position posA, Entity b, Position posB){
+        double deltaX = Math.abs(posA.x - posB.x);
+        double deltaY = Math.abs(posA.y - posB.y);
+        double leastX = (a.getWidth() + b.getWidth()) / 2;
+        double leastY = (a.getHeight() + b.getHeight()) / 2;
+        double x = deltaX - leastX;
+        double y = deltaY - leastY;
+        if(x <= 0 && y <= 0){
+            if(x * leastY < y * leastX){
+                // more inside in x-direction
+                // Top or Bottome
+                if(posA.y < posB.y)
+                    return 8;
+                else
+                    return 4;
+            }else{
+                // Left or Right
+                if(posA.x < posB.x)
+                    return 2;
+                else
+                    return 1;
             }
-        }
-        return false;
+        }else
+            return 0;
+
     }
 
-    /**
-     * 
-     * @param e
-     * @return true if there is collision with e at specified position. Removed entity will not be considered.
-     */
-    private boolean hasCollision(Entity e, Position pos){
+    private int getCollision(Entity e, Position pos){
+        int collision = 0;
         for(Entity e2 : positions.keySet()){
 
             if(removedEntities.contains(e2))
                 continue;
 
-            Position pos2 = newPositions.get(e);
+            Position pos2 = newPositions.get(e2);
             if(pos2 == null)
                 pos2 = getPosition(e2);
-            double radius = e.getRadius();
-            double dis = pos2.disFrom(pos);
-            if(dis <= radius + e2.getRadius() && collide(e, pos, e2, pos2)){
-                return true;
-            }
+            
+            collision |= collide(e, pos, e2, pos2);
                 
         }
-        return false;
+        return collision;
+    }
+    
+    private boolean hasCollision(Entity e, Position pos){
+        return getCollision(e, pos) != 0;
     }
 
     /**

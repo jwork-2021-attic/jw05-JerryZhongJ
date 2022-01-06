@@ -2,14 +2,14 @@ package io.github.jerryzhongj.calabash_brothers.server;
 
 class Settings {
     // Thread
-    static final int SCHEDULED_POOL_SIZE = 2;
+    static final int SCHEDULED_POOL_SIZE = 4;
     
     // Game
 
-    static final int FPS = 60;
+    static final int UPDATE_RATE = 60;
 
-    static final double BOUDARY_SHORT = 1;
-    static final double BOUDARY_LONG = 10;
+    static final double BOUNDARY_SHORT = 3;
+    static final double BOUNDARY_LONG = 20;
 
     static final double GRAVITY = 10;
     static final double MAX_FALL_SPEED = 30;
@@ -33,5 +33,10 @@ class Settings {
     static final double BRO_III_INITIAL_PROTECT = 0.7;
     static final double BRO_III_SUPER_PROTECT = 0;
 
+    static final double CALABASH_HEIGHT = 6;
+    static final double CALABASH_WIDTH = 6;
+
+    static final double CONCRETE_WIDTH = 20;
+    static final double CONCRETE_HEIGHT = 10;
 
 }

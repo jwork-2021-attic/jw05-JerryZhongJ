@@ -12,86 +12,81 @@ import java.util.Map;
 
 
 public class Loader {
-    private final Map<String, Object> cachedPool = new HashMap<>();
-   
 
-    public int[][] loadBoundary(String entityName){
-        int[][] cache = (int[][])cachedPool.get("Boundary:"+entityName);
-        if(cache != null)
-            return cache;
-        LinkedList<int[]> tmp = new LinkedList<>();
-        try (InputStream in = getClass().getResourceAsStream("/Boundaries/"+entityName);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(in, "UTF-8"))) {
+    // public int[][] loadBoundary(String entityName){
+    //     int[][] cache = (int[][])cachedPool.get("Boundary:"+entityName);
+    //     if(cache != null)
+    //         return cache;
+    //     LinkedList<int[]> tmp = new LinkedList<>();
+    //     try (InputStream in = getClass().getResourceAsStream("/Boundaries/"+entityName);
+    //         BufferedReader reader = new BufferedReader(new InputStreamReader(in, "UTF-8"))) {
 
-            String line = null;
-            while((line = reader.readLine()) != null){
-                String []coordStr = line.split("\\s");
-                int[] coord = {Integer.valueOf(coordStr[0]), Integer.valueOf(coordStr[1])};
-                tmp.add(coord);
-            }
+    //         String line = null;
+    //         while((line = reader.readLine()) != null){
+    //             String []coordStr = line.split("\\s");
+    //             int[] coord = {Integer.valueOf(coordStr[0]), Integer.valueOf(coordStr[1])};
+    //             tmp.add(coord);
+    //         }
 
-            cache = tmp.toArray(new int[tmp.size()][]);
-            cachedPool.put("Boundary:"+entityName, cache);
+    //         cache = tmp.toArray(new int[tmp.size()][]);
+    //         cachedPool.put("Boundary:"+entityName, cache);
             
 
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
+    //     } catch (IOException e) {
+    //         // TODO Auto-generated catch block
+    //         e.printStackTrace();
+    //         System.exit(1);
+    //     }
+    //     return cache;
+    // }
+
+    public World loadInitialWorld(String mapName){
+ 
+        World world = new World(this);
+        double width = 0;
+        double height = 0;
+        try(InputStream in = getClass().getResourceAsStream("/Maps/"+mapName);
+        BufferedReader reader = new BufferedReader(new InputStreamReader(in, "UTF-8"))){
+            String line = null;
+            while((line = reader.readLine()) != null){
+                String[] tokens = line.split("\\s*:\\s*");
+                switch(tokens[0]){
+                    case "width":
+                        width = Double.valueOf(tokens[1]);
+                        world.setWidth(width);
+                        break;
+                    case "height":
+                        height = Double.valueOf(tokens[1]);
+                        world.setHeight(height);
+                        break;
+                    default:
+                        String[] coord = tokens[1].split("\\s");
+                        Double x = Double.valueOf(coord[0]);
+                        Double y = Double.valueOf(coord[1]);
+                        world.setMap(tokens[0], new World.Position(x, y));
+                }
+            }
+        }catch(IOException e){
             e.printStackTrace();
             System.exit(1);
         }
-        return cache;
-    }
-
-    public World loadInitialWorld(String mapName){
-        Map<String, World.Position> cacheMap = (Map<String, World.Position>)cachedPool.get("Map:"+mapName);
-        Double cacheWidth = (Double)cachedPool.get("Map Width:"+mapName);
-        Double cacheHeight = (Double)cachedPool.get("Map Height:"+mapName);
-        World world = new World(this);
-        if(cacheMap == null){
-            cacheMap = new HashMap<>();
-            try(InputStream in = getClass().getResourceAsStream("/Maps/"+mapName);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(in, "UTF-8"))){
-                String line = null;
-                while((line = reader.readLine()) != null){
-                    String[] tokens = line.split("\\s*:\\s*");
-                    switch(tokens[0]){
-                        case "width":
-                            cacheWidth = Double.valueOf(tokens[1]);
-                            break;
-                        case "height":
-                            cacheHeight = Double.valueOf(tokens[1]);
-                            break;
-                        default:
-                            String[] coord = tokens[1].split("\\s");
-                            Double x = Double.valueOf(coord[0]);
-                            Double y = Double.valueOf(coord[1]);
-                            cacheMap.put(tokens[0], new World.Position(x, y));
-                    }
-                }
-            }catch(IOException e){
-                e.printStackTrace();
-                System.exit(1);
-            }
-            
-            // Add boundary to this world
-            for(double i =  -cacheWidth / 2;i + Settings.BOUDARY_LONG < cacheWidth / 2;i += Settings.BOUDARY_LONG){
-                cachedPool.put("Horizontal Boundary", new World.Position(i + Settings.BOUDARY_LONG / 2, -Settings.BOUDARY_SHORT / 2));
-                cachedPool.put("Horizontal Boundary", new World.Position(i + Settings.BOUDARY_LONG / 2, cacheHeight + Settings.BOUDARY_SHORT / 2));
-            }
-            for(double i = 0;i + Settings.BOUDARY_LONG < cacheHeight;i += Settings.BOUDARY_LONG){
-                cachedPool.put("Vertical Boundary", new World.Position(-cacheWidth / 2 - Settings.BOUDARY_SHORT / 2, i + Settings.BOUDARY_LONG / 2));
-                cachedPool.put("Vertical Boundary", new World.Position(cacheWidth / 2 + Settings.BOUDARY_SHORT / 2, i + Settings.BOUDARY_LONG / 2));
-            }
-
-            cachedPool.put("Map Width:"+mapName, cacheWidth);
-            cachedPool.put("Map Height:"+mapName, cacheHeight);
-            cachedPool.put("Map:"+mapName, cacheMap);
+        
+        // Add boundary to this world
+        for(double i =  0;i + Settings.BOUNDARY_LONG < width;i += Settings.BOUNDARY_LONG){
+            double x = -width / 2 + i + Settings.BOUNDARY_LONG / 2;
+            world.setMap("Horizontal Boundary", new World.Position(x, -Settings.BOUNDARY_SHORT / 2));
+            world.setMap("Horizontal Boundary", new World.Position(x, height + Settings.BOUNDARY_SHORT / 2));
+        }
+        for(double i = 0;i + Settings.BOUNDARY_LONG < height;i += Settings.BOUNDARY_LONG){
+            world.setMap("Vertical Boundary", new World.Position(-width / 2 - Settings.BOUNDARY_SHORT / 2, i + Settings.BOUNDARY_LONG / 2));
+            world.setMap("Vertical Boundary", new World.Position(width / 2 + Settings.BOUNDARY_SHORT / 2, i + Settings.BOUNDARY_LONG / 2));
         }
 
+
+
         // Configure world
-        world.setWidth(cacheWidth);
-        world.setHeight(cacheHeight);
-        world.setMap(cacheMap);
+        
+        
         return world;
     }
 

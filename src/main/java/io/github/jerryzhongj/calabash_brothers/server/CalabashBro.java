@@ -6,7 +6,7 @@ import lombok.Getter;
 
 abstract class CalabashBro extends MovableEntity{
     @Getter
-    protected double hp = 0;
+    protected double hp = Settings.INITIAL_HP;
     @Getter
     protected double mp = 0;
     protected double speed = Settings.DEFAULT_SPEED;
@@ -17,7 +17,7 @@ abstract class CalabashBro extends MovableEntity{
     protected boolean superMode = false;
 
     CalabashBro(World world, String number) {
-        super(world, "Calabash Brother " + number, world.getLoader().loadBoundary("Calabash Brother"));
+        super(world, "Calabash Brother " + number, Settings.CALABASH_HEIGHT, Settings.CALABASH_WIDTH);
         //TODO Auto-generated constructor stub
     }
 
