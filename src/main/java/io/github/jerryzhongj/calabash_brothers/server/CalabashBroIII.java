@@ -1,14 +1,17 @@
 package io.github.jerryzhongj.calabash_brothers.server;
 
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import io.github.jerryzhongj.calabash_brothers.EntityType;
+import io.github.jerryzhongj.calabash_brothers.Settings;
 import io.github.jerryzhongj.calabash_brothers.ThreadPool;
 
 public class CalabashBroIII extends CalabashBro{
 
     CalabashBroIII(World world, String name) {
-        super(world, name);
-        protectFactor = Settings.BRO_III_INITIAL_PROTECT;
+        super(world, name, world.getLoader().loadEntityWidth(EntityType.CALABASH_BRO_III), world.getLoader().loadEntityHeight(EntityType.CALABASH_BRO_III));
+        protectFactor = Settings.CALABASH_III_INITIAL_PROTECT;
     }
 
     @Override
@@ -17,11 +20,11 @@ public class CalabashBroIII extends CalabashBro{
             return;
 
         superMode = true;
-        protectFactor = Settings.BRO_III_SUPER_PROTECT;
+        protectFactor = Settings.CALABASH_III_SUPER_PROTECT;
 
         ThreadPool.scheduled.schedule(()->{
             superMode = false;
-            protectFactor = Settings.BRO_III_INITIAL_PROTECT;
+            protectFactor = Settings.CALABASH_III_INITIAL_PROTECT;
         }, Settings.SUPER_TIME_LIMIT, TimeUnit.MILLISECONDS);
         
     }

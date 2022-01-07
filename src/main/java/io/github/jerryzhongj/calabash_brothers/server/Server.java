@@ -14,7 +14,8 @@ import java.util.Set;
 import java.util.concurrent.SubmissionPublisher;
 import java.util.concurrent.TimeUnit;
 
-import io.github.jerryzhongj.calabash_brothers.GlobalSettings;
+import io.github.jerryzhongj.calabash_brothers.Settings;
+import io.github.jerryzhongj.calabash_brothers.Loader;
 import io.github.jerryzhongj.calabash_brothers.ThreadPool;
 
 // 不同玩家收到的数据是不同的，但大部分相同
@@ -29,7 +30,7 @@ public class Server {
         selector = Selector.open();
         ServerSocketChannel serverChannel = ServerSocketChannel.open();
         serverChannel.configureBlocking(false);
-        serverChannel.bind(new InetSocketAddress("localhost", GlobalSettings.PORT));
+        serverChannel.bind(new InetSocketAddress("localhost", Settings.PORT));
         serverChannel.register(selector, SelectionKey.OP_ACCEPT);
         
         ThreadPool.nonScheduled.submit(()->{

@@ -2,6 +2,7 @@ package io.github.jerryzhongj.calabash_brothers.server;
 
 import java.util.Set;
 
+import io.github.jerryzhongj.calabash_brothers.Settings;
 import io.github.jerryzhongj.calabash_brothers.server.World.UpdateOrder;
 import io.github.jerryzhongj.calabash_brothers.server.World.UpdateType;
 import lombok.Getter;
@@ -9,7 +10,7 @@ import lombok.Getter;
 
 abstract class CalabashBro extends MovableEntity{
     @Getter
-    protected double hp = Settings.INITIAL_HP;
+    protected double hp = Settings.MAX_HP;
     @Getter
     protected double mp = 0;
     protected double speed = Settings.DEFAULT_SPEED;
@@ -19,8 +20,8 @@ abstract class CalabashBro extends MovableEntity{
     protected boolean facing = false;
     protected boolean superMode = false;
 
-    CalabashBro(World world, String name) {
-        super(world, name, Settings.CALABASH_HEIGHT, Settings.CALABASH_WIDTH);
+    CalabashBro(World world, String name, double width, double height) {
+        super(world, name, width, height);
         //TODO Auto-generated constructor stub
     }
 

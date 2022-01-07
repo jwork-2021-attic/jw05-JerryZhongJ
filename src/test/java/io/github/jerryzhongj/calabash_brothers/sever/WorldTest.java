@@ -4,9 +4,9 @@ import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
+import io.github.jerryzhongj.calabash_brothers.Loader;
 import io.github.jerryzhongj.calabash_brothers.server.CalabashBro;
 import io.github.jerryzhongj.calabash_brothers.server.CalabashBroI;
-import io.github.jerryzhongj.calabash_brothers.server.Loader;
 import io.github.jerryzhongj.calabash_brothers.server.World;
 
 /**

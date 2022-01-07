@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
@@ -23,11 +22,7 @@
             <Rectangle fx:id="mpBar" arcHeight="10.0" arcWidth="10.0" fill="#51a5f5" height="12.0" stroke="BLACK" strokeType="INSIDE" strokeWidth="0.0" width="100.0" />
          </children>
       </StackPane>
-      <ImageView fx:id="imgView" fitWidth="105.0" pickOnBounds="true" preserveRatio="true">
-         <image>
-            <Image url="@../images/CalabashI.png" />
-         </image>
-      </ImageView>
+      <ImageView fx:id="imgView" fitWidth="105.0" pickOnBounds="true" preserveRatio="true" />
       <Text fx:id="name" fill="#393939" strokeType="OUTSIDE" strokeWidth="0.0" text="Name">
          <font>
             <Font size="24.0" />

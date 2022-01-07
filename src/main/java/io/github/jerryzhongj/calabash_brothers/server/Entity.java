@@ -16,7 +16,7 @@ class Entity {
     private final String name;
     // @Getter
     // private final double radius;
-    Entity(World world, String name, double height, double width) {
+    Entity(World world, String name, double width, double height) {
         this.height = height;
         this.width = width;
         this.world = world;

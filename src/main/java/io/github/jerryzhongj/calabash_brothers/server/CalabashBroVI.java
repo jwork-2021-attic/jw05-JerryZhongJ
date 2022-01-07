@@ -1,5 +1,6 @@
 package io.github.jerryzhongj.calabash_brothers.server;
 
+import io.github.jerryzhongj.calabash_brothers.EntityType;
 import lombok.Getter;
 
 class CalabashBroVI extends CalabashBro{
@@ -8,7 +9,7 @@ class CalabashBroVI extends CalabashBro{
     private boolean invisible = false;
     
     CalabashBroVI(World world, String name) {
-        super(world, name);
+        super(world, name, world.getLoader().loadEntityWidth(EntityType.CALABASH_BRO_VI), world.getLoader().loadEntityHeight(EntityType.CALABASH_BRO_VI));
     }
 
     @Override

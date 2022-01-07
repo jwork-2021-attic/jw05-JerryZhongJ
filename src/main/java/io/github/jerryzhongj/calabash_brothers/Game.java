@@ -3,31 +3,35 @@ package io.github.jerryzhongj.calabash_brothers;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
+
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.HashMap;
+import java.util.Map;
 
-import javax.swing.event.AncestorEvent;
-
-import org.xml.sax.InputSource;
 
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.DoubleBinding;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.ListProperty;
+
 import javafx.beans.property.MapProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleMapProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.MapChangeListener;
+import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.layout.AnchorPane;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.VBox;
+import javafx.scene.shape.Rectangle;
 import lombok.Getter;
+
 
 class Game{
     private DataInputStream inputStream;
@@ -40,12 +44,30 @@ class Game{
     private DoubleProperty anchoredY = new SimpleDoubleProperty();
     private DoubleProperty camX = new SimpleDoubleProperty();
     private DoubleProperty camY = new SimpleDoubleProperty();
-    private DoubleProperty width = new SimpleDoubleProperty(GlobalSettings.PREF_WIDTH);
-    private DoubleProperty height = new SimpleDoubleProperty(GlobalSettings.PREF_HEIGHT);
-    Game() {
-        canvas.setPrefSize(GlobalSettings.PREF_WIDTH, GlobalSettings.PREF_HEIGHT);
+    private DoubleProperty width = new SimpleDoubleProperty(Settings.PREF_WIDTH);
+    private DoubleProperty height = new SimpleDoubleProperty(Settings.PREF_HEIGHT);
+
+    private Map<EntityType, Double> offsetXs = new HashMap<>();
+    private Map<EntityType, Double> offsetYs = new HashMap<>();
+    
+    private Loader loader;
+    private FXMLLoader characterLoader = new  FXMLLoader(getClass().getResource("/FXML/Character.fxml"));
+    Game(Loader loader) {
+        this.loader = loader;
+
+        canvas.setPrefSize(Settings.PREF_WIDTH, Settings.PREF_HEIGHT);
         canvas.maxHeightProperty().bind(height);
         canvas.maxWidthProperty().bind(width);
+
+        // Loading meta info
+        // TODO: more types
+        offsetXs.put(EntityType.CALABASH_BRO_I, loader.loadEntityOffsetX(EntityType.CALABASH_BRO_I));
+        offsetXs.put(EntityType.CALABASH_BRO_III, loader.loadEntityOffsetX(EntityType.CALABASH_BRO_III));
+        offsetXs.put(EntityType.CONCRETE, loader.loadEntityOffsetX(EntityType.CONCRETE));
+
+        offsetYs.put(EntityType.CALABASH_BRO_I, loader.loadEntityOffsetY(EntityType.CALABASH_BRO_I));
+        offsetYs.put(EntityType.CALABASH_BRO_III, loader.loadEntityOffsetY(EntityType.CALABASH_BRO_III));
+        offsetYs.put(EntityType.CONCRETE, loader.loadEntityOffsetY(EntityType.CONCRETE));
 
         // Setting Camera
         DoubleBinding camXBindings = Bindings.createDoubleBinding(()->{
@@ -92,25 +114,54 @@ class Game{
 
         elements.addListener((MapChangeListener.Change<? extends Integer, ? extends Element> change) ->{
                 if(change.wasAdded()){
-                    
+                    Element e = change.getValueAdded();
+                    String location = "/images/"+e.elementType.getName()+".png";
+                    Node node;
+                    switch(e.elementType){
+                        case CALABASH_BRO_I:
+                        case CALABASH_BRO_III:
+                        case CALABASH_BRO_VI:
+                            Character c = (Character)e;
+                            try {
+                                node = (VBox)characterLoader.load();
+                                ImageView imgView = (ImageView)node.lookup("#imgView");
+                                Rectangle hpBar = (Rectangle)node.lookup("#hpBar");
+                                Rectangle mpBar = (Rectangle)node.lookup("#mpBar");
+                                imgView.setImage(new Image(getClass().getResource(location).toString()));
+                                hpBar.widthProperty().bind(c.hp.divide(Settings.MAX_HP).multiply(Settings.BAR_WIDTH));
+                                mpBar.widthProperty().bind(c.mp.divide(Settings.MAX_HP).multiply(Settings.BAR_WIDTH));
+                            } catch (IOException e1) {
+                                
+                                e1.printStackTrace();
+                            }
+                        default:
+                            node = new ImageView(getClass().getResource(location).toString());
+                            break;
+                    }
+                    double offsetX = offsetXs.get(e.elementType);
+                    double offsetY = offsetYs.get(e.elementType);
+
+                    node.layoutXProperty().bind(e.x.subtract(camX).subtract(offsetX));
+                    node.layoutYProperty().bind(camY.subtract(e.y).subtract(offsetY));
+                    e.node = node;
                 }
 
                 if(change.wasRemoved()){
-                    
+                    //TODO  
                 }
                 
             }
         );
     }
 
-    void connect(String serverName, String name, byte CalabashType) throws UnknownHostException, IOException{
-        Socket server = new Socket(serverName, GlobalSettings.PORT);
+    void connect(String serverName, String name, EntityType calabashType) throws UnknownHostException, IOException{
+        Socket server = new Socket(serverName, Settings.PORT);
         outputStream = new DataOutputStream(server.getOutputStream());
         inputStream = new DataInputStream(server.getInputStream());
         outputStream.write(RequestProtocol.SET_NAME);
         outputStream.writeChars(name);
         outputStream.write(RequestProtocol.SET_CALABASH);
-        outputStream.write(CalabashType);
+        outputStream.write(calabashType.getCode());
 
         new Thread(()->{
             // TODO: Thread Exception handler
@@ -128,9 +179,9 @@ class Game{
         DoubleProperty x = new SimpleDoubleProperty(0);
         DoubleProperty y = new SimpleDoubleProperty(0);
         BooleanProperty reverse = new SimpleBooleanProperty(false);
-        byte elementType;
+        EntityType elementType;
         Node node;
-        Element(byte type){
+        Element(EntityType type){
             elementType = type;
         }
         
@@ -140,7 +191,7 @@ class Game{
         StringProperty name;
         DoubleProperty hp;
         DoubleProperty mp;
-        Character(byte type) {
+        Character(EntityType type) {
             super(type);
         }
     }
@@ -161,9 +212,19 @@ class Game{
             switch(command){
                 case ResponseProtocol.ADD:
                     int id = inputStream.readInt();
-                    byte type = inputStream.readByte();
+                    EntityType type = EntityType.getType(inputStream.readInt());
                     Platform.runLater(()->{
-                        elements.put(id, new Element(type));
+                        switch(type){
+                            case CALABASH_BRO_I:    
+                            case CALABASH_BRO_III:
+                            case CALABASH_BRO_VI:
+                                elements.put(id, new Character(type));
+                                break;
+                            default:
+                                elements.put(id, new Element(type));
+                                break;
+                        }
+                        
                     });
                     break;
                 case ResponseProtocol.SET_POS:

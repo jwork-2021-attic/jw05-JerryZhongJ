@@ -25,7 +25,7 @@ class Player implements Subscriber<SnapShot>{
     
     // This is used when setting up the world
     @Getter
-    private byte calabashType = 0x00;
+    private EntityType calabashType;
     @Getter
     private String name;
 
@@ -48,7 +48,7 @@ class Player implements Subscriber<SnapShot>{
                             name = getString(readBuffer);
                             break;
                         case RequestProtocol.SET_CALABASH:
-                            calabashType = readBuffer.get();
+                            calabashType = EntityType.getType(readBuffer.getInt());
                             break;
                         case RequestProtocol.MOVE_LEFT:
                             if(calabash != null && calabash.isAlive())
@@ -158,7 +158,7 @@ class Player implements Subscriber<SnapShot>{
     }
 
     boolean isReady(){
-        return name != null && calabashType != 0x00;
+        return name != null && calabashType != null;
     }
 
     void control(CalabashBro calabash){
@@ -225,11 +225,11 @@ class Player implements Subscriber<SnapShot>{
                     writeBuffer(ResponseProtocol.ADD);
                     writeBuffer(e.hashCode());
                     if(e instanceof CalabashBroI)
-                        writeBuffer(EntityType.CALABASH_BRO_I);
+                        writeBuffer(EntityType.CALABASH_BRO_I.getCode());
                     if(e instanceof CalabashBroIII)
-                        writeBuffer(EntityType.CALABASH_BRO_III);
+                        writeBuffer(EntityType.CALABASH_BRO_III.getCode());
                     if(e instanceof Concrete)
-                        writeBuffer(EntityType.CONCRETE);
+                        writeBuffer(EntityType.CONCRETE.getCode());
                     // TODO: more types
 
                 }

@@ -20,6 +20,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Predicate;
 
 import io.github.jerryzhongj.calabash_brothers.EntityType;
+import io.github.jerryzhongj.calabash_brothers.Loader;
+import io.github.jerryzhongj.calabash_brothers.Settings;
 import io.github.jerryzhongj.calabash_brothers.ThreadPool;
 import javafx.geometry.Pos;
 import lombok.AllArgsConstructor;
@@ -350,7 +352,8 @@ public class World implements Serializable{
      * 
      * @param map consists of unmovable entity, including the boundary of this world.
      */
-    void setMap(String entityName, Position pos){
+    public void setMap(String entityName, double x, double y){
+        Position pos = new Position(x, y);
         switch(entityName){
             case "Concrete":
                 positions.put(new Concrete(this), pos);
@@ -376,10 +379,10 @@ public class World implements Serializable{
         CalabashBro bro = null;
         String name = player.getName();
         switch(player.getCalabashType()){
-            case EntityType.CALABASH_BRO_I:
+            case CALABASH_BRO_I:
                 bro = new CalabashBroI(this, name);
                 break;
-            case EntityType.CALABASH_BRO_III:
+            case CALABASH_BRO_III:
                 bro = new CalabashBroIII(this, name);
             default:
                 return;
