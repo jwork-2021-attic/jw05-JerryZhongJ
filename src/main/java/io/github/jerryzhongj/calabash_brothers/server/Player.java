@@ -236,6 +236,7 @@ class Player implements Subscriber<SnapShot>{
 
                 if(oldPos == null || Math.abs(oldPos.x - pos.x) > 0.5 || Math.abs(oldPos.y - pos.y) > 0.5){
                     writeBuffer(ResponseProtocol.SET_POS);
+                    writeBuffer(e.hashCode());
                     writeBuffer(pos.x);
                     writeBuffer(pos.y);
                 }else{
@@ -286,6 +287,7 @@ class Player implements Subscriber<SnapShot>{
                 writeBuffer(calabash.hashCode());
                 for(CalabashBro bro : hps.keySet()){
                     writeBuffer(ResponseProtocol.SET_NAME);
+                    writeBuffer(bro.hashCode());
                     writeBuffer(bro.getName());
                 }
                 firstReponse = false;

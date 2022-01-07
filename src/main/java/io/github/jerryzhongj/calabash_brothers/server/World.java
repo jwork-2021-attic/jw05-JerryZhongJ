@@ -20,6 +20,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Predicate;
 
 import io.github.jerryzhongj.calabash_brothers.EntityType;
+import io.github.jerryzhongj.calabash_brothers.ThreadPool;
 import javafx.geometry.Pos;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

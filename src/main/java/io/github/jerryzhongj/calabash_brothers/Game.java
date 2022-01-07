@@ -18,25 +18,36 @@ import javafx.beans.property.ListProperty;
 import javafx.beans.property.MapProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleMapProperty;
 import javafx.beans.property.StringProperty;
 import javafx.scene.Scene;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.Pane;
 import lombok.Getter;
 
 class Game{
     private DataInputStream inputStream;
     private DataOutputStream outputStream;
-    private AnchorPane anchorPane;
+    private Pane canvas = new Pane();
     @Getter
-    private Scene scene;
-    private MapProperty<Integer, Element> elements;
+    private Scene scene = new Scene(canvas);
+    private MapProperty<Integer, Element> elements = new SimpleMapProperty<>();
     private Element anchoredElement;
-    private DoubleProperty camX;
-    private DoubleProperty camY;
+    private DoubleProperty camX = new SimpleDoubleProperty();
+    private DoubleProperty camY = new SimpleDoubleProperty();
+    private DoubleProperty width = new SimpleDoubleProperty(GlobalSettings.PREF_WIDTH);
+    private DoubleProperty height = new SimpleDoubleProperty(GlobalSettings.PREF_HEIGHT);
     Game() {
+        canvas.setPrefSize(GlobalSettings.PREF_WIDTH, GlobalSettings.PREF_HEIGHT);
+        canvas.maxHeightProperty().bind(height);
+        canvas.maxWidthProperty().bind(width);
+    }
+
+    void computeCameraPostion(){
+        // TODO
         
     }
-    
+
     void connect(String serverName, String name, byte CalabashType) throws UnknownHostException, IOException{
         Socket server = new Socket(serverName, GlobalSettings.PORT);
         outputStream = new DataOutputStream(server.getOutputStream());
@@ -153,6 +164,16 @@ class Game{
                     e = elements.get(id);
                     if(e != null)
                         anchoredElement = e;
+                    break;
+                case ResponseProtocol.SET_SIZE:
+                    id = inputStream.readInt();
+                    double w = inputStream.readDouble();
+                    double h = inputStream.readDouble();
+                    Platform.runLater(()->{
+                        width.set(w);
+                        height.set(h);
+                    });
+                    break;
                 case ResponseProtocol.WINNER:
                     //TODO
                     break;

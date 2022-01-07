@@ -2,6 +2,8 @@ package io.github.jerryzhongj.calabash_brothers.server;
 
 import java.util.concurrent.TimeUnit;
 
+import io.github.jerryzhongj.calabash_brothers.ThreadPool;
+
 public class CalabashBroIII extends CalabashBro{
 
     CalabashBroIII(World world, String name) {

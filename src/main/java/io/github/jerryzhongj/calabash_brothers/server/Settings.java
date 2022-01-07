@@ -2,7 +2,7 @@ package io.github.jerryzhongj.calabash_brothers.server;
 
 class Settings {
     // Thread
-    static final int SCHEDULED_POOL_SIZE = 4;
+    
     
     // Game
 
