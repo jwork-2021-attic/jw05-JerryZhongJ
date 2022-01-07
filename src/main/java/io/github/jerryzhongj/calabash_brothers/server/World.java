@@ -20,11 +20,12 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Predicate;
 
 import io.github.jerryzhongj.calabash_brothers.EntityType;
+import javafx.geometry.Pos;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
-import io.github.jerryzhongj.calabash_brothers.EntityType;
+
 // 这个世界是连续的，以像素为长度单位
 // 坐标以地面的中心为原点
 public class World implements Serializable{
@@ -365,22 +366,27 @@ public class World implements Serializable{
 
     public void setPlayers(Player []players){
         for(Player player : players){
-            CalabashBro bro = null;
-            String name = player.getName();
-            switch(player.getCalabashType()){
-                case EntityType.CALABASH_BRO_I:
-                    bro = new CalabashBroI(this, name);
-                    break;
-                case EntityType.CALABASH_BRO_III:
-                    bro = new CalabashBroIII(this, name);
-                default:
-                    continue;
-            }
-            player.control(bro);
-            livingCalabash.add(bro);
+            setPlayer(player);
         }
     }
 
+    public void setPlayer(Player player){
+        // TODO: more brothers
+        CalabashBro bro = null;
+        String name = player.getName();
+        switch(player.getCalabashType()){
+            case EntityType.CALABASH_BRO_I:
+                bro = new CalabashBroI(this, name);
+                break;
+            case EntityType.CALABASH_BRO_III:
+                bro = new CalabashBroIII(this, name);
+            default:
+                return;
+        }
+        player.control(bro);
+        livingCalabash.add(bro);
+        
+    }
     
     /**
      * set players, register some infinite updates.
@@ -517,8 +523,6 @@ public class World implements Serializable{
         try{
             stateLock.readLock().lock();
 
-            
-
             newPositions.clear();
             newVelocities.clear();
             removedEntities.clear();
@@ -586,8 +590,7 @@ public class World implements Serializable{
         
         // Only one character left, end this world.
        
-        if(livingCalabash.size() == 1){
-            System.out.printf("%s win\n", livingCalabash.get(0).getName());
+        if(livingCalabash.size() < 2){
             end();
         }
 
@@ -771,5 +774,37 @@ public class World implements Serializable{
         }
         
         return result;
+    }
+
+    SnapShot getSnapShot(){
+        SnapShot snapshot = new SnapShot();
+        // No boundary
+        try{
+            stateLock.readLock().lock();
+            for(Map.Entry<Entity, Position> entry : positions.entrySet()){
+                Entity e = entry.getKey();
+                Position pos = entry.getValue();
+                if(e instanceof VerticalBoundary || e instanceof HorizontalBoundary)
+                    continue;
+                snapshot.positions.put(e, pos);
+            }
+        }catch(Exception e){
+            throw e;
+        }finally{
+            stateLock.readLock().unlock();
+        }
+        
+        for(CalabashBro bro:livingCalabash){
+            snapshot.hps.put(bro, bro.getHp());
+            snapshot.mps.put(bro, bro.getMp());
+        }
+
+        if(livingCalabash.size() == 1)
+            snapshot.winner = livingCalabash.get(0).getName();
+        
+        if(livingCalabash.size() == 0)
+            snapshot.winner = "nobody";
+
+        return snapshot;
     }
 }

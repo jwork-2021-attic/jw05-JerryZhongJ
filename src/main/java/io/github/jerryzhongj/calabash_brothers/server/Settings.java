@@ -7,6 +7,7 @@ class Settings {
     // Game
 
     static final int UPDATE_RATE = 60;
+    static final int FPS = 24;
 
     static final double BOUNDARY_SHORT = 3;
     static final double BOUNDARY_LONG = 20;
