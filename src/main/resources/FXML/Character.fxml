@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Rectangle?>
+<?import javafx.scene.text.Font?>
+<?import javafx.scene.text.Text?>
+
+
+<VBox alignment="CENTER" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefWidth="105.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1">
+   <children>
+      <StackPane>
+         <children>
+            <Rectangle arcHeight="10.0" arcWidth="10.0" fill="#ba8900" height="17.0" stroke="BLACK" strokeType="INSIDE" strokeWidth="0.0" width="105.0" />
+            <Rectangle fx:id="hpBar" arcHeight="10.0" arcWidth="10.0" fill="#f5d153" height="12.0" stroke="BLACK" strokeType="INSIDE" strokeWidth="0.0" width="100.0" />
+         </children>
+      </StackPane>
+      <StackPane>
+         <children>
+            <Rectangle arcHeight="10.0" arcWidth="10.0" fill="#0061bc" height="17.0" stroke="BLACK" strokeType="INSIDE" strokeWidth="0.0" width="105.0" />
+            <Rectangle fx:id="mpBar" arcHeight="10.0" arcWidth="10.0" fill="#51a5f5" height="12.0" stroke="BLACK" strokeType="INSIDE" strokeWidth="0.0" width="100.0" />
+         </children>
+      </StackPane>
+      <ImageView fx:id="imgView" fitWidth="105.0" pickOnBounds="true" preserveRatio="true">
+         <image>
+            <Image url="@../images/CalabashI.png" />
+         </image>
+      </ImageView>
+      <Text fx:id="name" fill="#393939" strokeType="OUTSIDE" strokeWidth="0.0" text="Name">
+         <font>
+            <Font size="24.0" />
+         </font>
+      </Text>
+   </children>
+</VBox>
