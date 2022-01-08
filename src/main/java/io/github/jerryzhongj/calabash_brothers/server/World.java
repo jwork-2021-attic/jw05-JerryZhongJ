@@ -36,7 +36,7 @@ public class World implements Serializable{
 
     enum WorldStatus{
         // END means the game finish, however STOP means world was forcely stop.
-        SETUP, READY, RUNNING, END
+        PAUSE, RUNNING, END
     }
 
     @AllArgsConstructor
@@ -142,7 +142,7 @@ public class World implements Serializable{
                 v = getVelocity(me);
                 if(v == null){
                     // TODO: Log
-                    System.out.printf("Cannot set add v for %s: not found in this world.", me.getName());
+                    System.out.printf("Cannot set add v for %s: not found in this world.", me.getType().getName());
                     return;
                 }
             }
@@ -160,7 +160,7 @@ public class World implements Serializable{
                 v = getVelocity(me);
                 if(v == null){
                     // TODO: Log
-                    System.out.printf("Cannot set vx for %s: not found in this world.", me.getName());
+                    System.out.printf("Cannot set vx for %s: not found in this world.", me.getType().getName());
                     return;
                 }
             }
@@ -173,7 +173,7 @@ public class World implements Serializable{
                 v = getVelocity(me);
                 if(v == null){
                     // TODO: Log
-                    System.out.printf("Cannot set vy for %s: not found in this world.", me.getName());
+                    System.out.printf("Cannot set vy for %s: not found in this world.", me.getType().getName());
                     return;
                 }
             }
@@ -203,7 +203,7 @@ public class World implements Serializable{
                 pos = getPosition(e);
                 if(pos == null){
                     // TODO: Log
-                    System.out.printf("Cannot set x for %s: not found in this world.", e.getName());
+                    System.out.printf("Cannot set x for %s: not found in this world.", e.getType().getName());
                     return;
                 }
             }
@@ -216,7 +216,7 @@ public class World implements Serializable{
                 pos = getPosition(e);
                 if(pos == null){
                     // TODO: Log
-                    System.out.printf("Cannot set x for %s: not found in this world.", e.getName());
+                    System.out.printf("Cannot set x for %s: not found in this world.", e.getType().getName());
                     return;
                 }
             }
@@ -311,7 +311,7 @@ public class World implements Serializable{
     @Getter
     private  Loader loader;
 
-    private WorldStatus status = WorldStatus.SETUP;
+    private WorldStatus status = WorldStatus.PAUSE;
 
     private ScheduledFuture<?> running = null;
 
@@ -320,6 +320,8 @@ public class World implements Serializable{
     private double width = 0;
     @Setter
     private double height = 0;
+    @Setter
+    private String background;
 
     // A state of the world consists of positions and velocities
     private  Map<Entity, Position> positions = new HashMap<>();
@@ -346,76 +348,6 @@ public class World implements Serializable{
             updateQueues[i] = new ConcurrentLinkedQueue<>();
         }
         
-    }
-
-    /**
-     * 
-     * @param map consists of unmovable entity, including the boundary of this world.
-     */
-    public void setMap(String entityName, double x, double y){
-        Position pos = new Position(x, y);
-        switch(entityName){
-            case "Concrete":
-                positions.put(new Concrete(this), pos);
-                break;
-            case "Vertical Boundary":
-                positions.put(new VerticalBoundary(this), pos);
-                break;
-            case "Horizontal Boundary":
-                positions.put(new HorizontalBoundary(this), pos);
-                break;
-        }
-        
-    }
-
-    public void setPlayers(Player []players){
-        for(Player player : players){
-            setPlayer(player);
-        }
-    }
-
-    public void setPlayer(Player player){
-        // TODO: more brothers
-        CalabashBro bro = null;
-        String name = player.getName();
-        switch(player.getCalabashType()){
-            case CALABASH_BRO_I:
-                bro = new CalabashBroI(this, name);
-                break;
-            case CALABASH_BRO_III:
-                bro = new CalabashBroIII(this, name);
-            default:
-                return;
-        }
-        player.control(bro);
-        livingCalabash.add(bro);
-        
-    }
-    
-    /**
-     * set players, register some infinite updates.
-     */
-    public void ready(){
-
-        if(width == 0 || height == 0 || positions.isEmpty() || livingCalabash.isEmpty()){
-            System.out.println("Setup not finished!");
-            return;
-        }
-
-        
-        for(CalabashBro bro : livingCalabash){
-            velocities.put(bro, new Velocity(0,0));
-            double randomX;
-            double randomY;
-            Position pos;
-            do{
-                randomX = -width / 2 + width * 0.5 * Math.random();
-                randomY = height * 0.5 * Math.random();
-                pos = new Position(randomX, randomY);
-            }while(hasCollision(bro, pos));
-            positions.put(bro, pos);
-        }
-
         // Register gravity
         registerUpdate(new Update(World.UpdateType.INFINTE){
             @Override
@@ -514,9 +446,62 @@ public class World implements Serializable{
             }
 
         }, World.UpdateOrder.VALIDATION_CHECK); 
-
-        status = WorldStatus.READY;
     }
+
+    /**
+     * 
+     * @param map consists of unmovable entity, including the boundary of this world.
+     */
+    public void setMap(String entityName, double x, double y){
+        Position pos = new Position(x, y);
+        switch(entityName){
+            case "Concrete":
+                positions.put(new Earth(this), pos);
+                break;
+            case "Vertical Boundary":
+                positions.put(new VerticalBoundary(this), pos);
+                break;
+            case "Horizontal Boundary":
+                positions.put(new HorizontalBoundary(this), pos);
+                break;
+        }
+        
+    }
+
+    public void setPlayers(Player []players){
+        for(Player player : players){
+            setPlayer(player);
+        }
+    }
+
+    public void setPlayer(Player player){
+        // TODO: more brothers
+        CalabashBro bro = null;
+        String name = player.getName();
+        switch(player.getCalabashType()){
+            case CALABASH_BRO_I:
+                bro = new CalabashBroI(this, name);
+                break;
+            case CALABASH_BRO_III:
+                bro = new CalabashBroIII(this, name);
+            default:
+                return;
+        }
+        player.control(bro);
+        livingCalabash.add(bro);
+        velocities.put(bro, new Velocity(0,0));
+        double randomX;
+        double randomY;
+        Position pos;
+        do{
+            randomX = -width / 2 + width * 0.5 * Math.random();
+            randomY = height * 0.5 * Math.random();
+            pos = new Position(randomX, randomY);
+        }while(hasCollision(bro, pos));
+        positions.put(bro, pos);
+        
+    }
+    
     
     // All updates happen here. There is no other way to change the state of the world.
     // Updates must happen sequently.
@@ -611,8 +596,11 @@ public class World implements Serializable{
     }
     
     public void resume(){
-        if(status != WorldStatus.READY){
-            System.out.println("This world is not ready!");
+        if(status != WorldStatus.PAUSE)
+            System.out.println("Can not resume: This world is running or has ended");
+
+        if(width == 0 || height == 0 || positions.isEmpty() || livingCalabash.isEmpty()){
+            System.out.println("Setup not finished!");
             return;
         }
         
@@ -635,7 +623,7 @@ public class World implements Serializable{
         }
         running.cancel(false);
         running = null;
-        status = WorldStatus.READY;
+        status = WorldStatus.PAUSE;
     }
 
     private void end(){
@@ -782,13 +770,18 @@ public class World implements Serializable{
 
     SnapShot getSnapShot(){
         SnapShot snapshot = new SnapShot();
+
+        snapshot.width = width;
+        snapshot.height = height;
+        snapshot.background = background;
+
         // No boundary
         try{
             stateLock.readLock().lock();
             for(Map.Entry<Entity, Position> entry : positions.entrySet()){
                 Entity e = entry.getKey();
                 Position pos = entry.getValue();
-                if(e instanceof VerticalBoundary || e instanceof HorizontalBoundary)
+                if(e.getType() == EntityType.FAKE)
                     continue;
                 snapshot.positions.put(e, pos);
             }

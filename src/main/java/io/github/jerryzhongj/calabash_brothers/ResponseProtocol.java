@@ -5,6 +5,9 @@ public class ResponseProtocol {
     // SET_SIZE w:double h:double
     public static final byte SET_SIZE = 0x0;
 
+    // SET_BACKGROUND background name
+    public static final byte SET_BACKGROUND = 0x1;
+
     // ADD id:int type:byte. Types determine which image to post.
     public static final byte ADD = 0x2;
 

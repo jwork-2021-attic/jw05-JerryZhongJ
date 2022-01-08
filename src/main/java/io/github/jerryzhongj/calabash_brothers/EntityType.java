@@ -3,10 +3,11 @@ package io.github.jerryzhongj.calabash_brothers;
 import lombok.Getter;
 
 public enum EntityType {
+    FAKE(0x00, "Fake Entity"),
     CALABASH_BRO_I(0x01, "Calabash Brother I"),
     CALABASH_BRO_III(0x03, "Calabash Brother III"),
     CALABASH_BRO_VI(0x06, "Calabash Brother VI"),
-    CONCRETE(0x10, "Concrete");
+    Earth(0x10, "Earth");
 
     @Getter
     private final int code;

@@ -3,10 +3,10 @@ package io.github.jerryzhongj.calabash_brothers.server;
 import io.github.jerryzhongj.calabash_brothers.EntityType;
 import io.github.jerryzhongj.calabash_brothers.Settings;
 
-class Concrete extends Entity{
+class Earth extends Entity{
 
-    Concrete(World world) {
-        super(world, "Concrete", world.getLoader().loadEntityWidth(EntityType.CONCRETE), world.getLoader().loadEntityHeight(EntityType.CONCRETE));
+    Earth(World world) {
+        super(world, EntityType.Earth, world.getLoader().loadEntityWidth(EntityType.Earth), world.getLoader().loadEntityHeight(EntityType.Earth));
         //TODO Auto-generated constructor stub
     }
     

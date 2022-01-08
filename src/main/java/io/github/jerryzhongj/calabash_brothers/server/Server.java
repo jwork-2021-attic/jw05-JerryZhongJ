@@ -24,6 +24,8 @@ public class Server {
     private Selector selector;
     private List<Player> players= new LinkedList<>();
     private Loader loader = new Loader();
+    private World world;
+    private SubmissionPublisher<SnapShot> publisher = new SubmissionPublisher<>();
     
     public Server() throws IOException{
        
@@ -44,9 +46,8 @@ public class Server {
     }
 
     public void startWorld(){
-        World world = loader.loadInitialWorld("default");
-        SubmissionPublisher<SnapShot> publisher = new SubmissionPublisher<>();
-
+        world = loader.loadInitialWorld("default");
+        
         for(Player player : players){
             if(!player.isReady())
                 continue;
@@ -55,8 +56,8 @@ public class Server {
             publisher.subscribe(player);
         }
 
-        world.ready();
         world.resume();
+
         ThreadPool.scheduled.scheduleAtFixedRate(()->{
             try{
                 publisher.submit(world.getSnapShot());

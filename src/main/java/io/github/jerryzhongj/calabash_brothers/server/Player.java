@@ -53,18 +53,30 @@ class Player implements Subscriber<SnapShot>{
                         case RequestProtocol.MOVE_LEFT:
                             if(calabash != null && calabash.isAlive())
                                 calabash.moveLeft();
-                                break;
+                            break;
                         case RequestProtocol.MOVE_RIGHT:
                             if(calabash != null && calabash.isAlive())
-                            calabash.moveRight();
+                                calabash.moveRight();
+                            break;
+                        case RequestProtocol.STOP:
+                            if(calabash != null && calabash.isAlive())
+                                calabash.stop();
                             break;
                         case RequestProtocol.JUMP:
                             if(calabash != null && calabash.isAlive())
-                            calabash.jump();
+                                calabash.jump();
+                            break;
+                        case RequestProtocol.PUNCH:
+                            if(calabash != null && calabash.isAlive())
+                                calabash.punch();
                             break;
                         case RequestProtocol.SUPERMODE:
                             if(calabash != null && calabash.isAlive())
-                            calabash.superfy();
+                                calabash.superMode();
+                            break;
+                        case RequestProtocol.STOP_SUPER_MODE:
+                            if(calabash != null && calabash.isAlive())
+                                calabash.stopSuperMode();
                             break;
                     }
                     // Mark when a whole command complete
@@ -187,7 +199,8 @@ class Player implements Subscriber<SnapShot>{
         Map<CalabashBro, Double> mps = new HashMap<>(item.mps);
         double width = item.width;
         double height = item.height;
-        
+        String background = item.background;
+
         // Some special process
         for(Map.Entry<Entity, World.Position> entry : item.positions.entrySet()){
             Entity e = entry.getKey();
@@ -214,6 +227,12 @@ class Player implements Subscriber<SnapShot>{
                 width = oldSnapShot.width;
             }
 
+            // SET_BACKGROUND
+            if(background != oldSnapShot.background){
+                writeBuffer(ResponseProtocol.SET_BACKGROUND);
+                writeBuffer(background);
+            }
+
             // ADD and SET
             for(Map.Entry<Entity, World.Position> entry : positions.entrySet()){
                 Entity e = entry.getKey();
@@ -228,8 +247,8 @@ class Player implements Subscriber<SnapShot>{
                         writeBuffer(EntityType.CALABASH_BRO_I.getCode());
                     if(e instanceof CalabashBroIII)
                         writeBuffer(EntityType.CALABASH_BRO_III.getCode());
-                    if(e instanceof Concrete)
-                        writeBuffer(EntityType.CONCRETE.getCode());
+                    if(e instanceof Earth)
+                        writeBuffer(EntityType.Earth.getCode());
                     // TODO: more types
 
                 }
@@ -307,7 +326,7 @@ class Player implements Subscriber<SnapShot>{
         
 
         // Save old snapshot
-        oldSnapShot = new SnapShot(width, height, positions, hps, mps);
+        oldSnapShot = new SnapShot(width, height, background, positions, hps, mps);
         
         subscription.request(1);
     }

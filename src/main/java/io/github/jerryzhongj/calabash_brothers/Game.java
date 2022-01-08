@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 
@@ -17,16 +19,23 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 
 import javafx.beans.property.MapProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.Property;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleMapProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.MapChangeListener;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
@@ -47,27 +56,16 @@ class Game{
     private DoubleProperty width = new SimpleDoubleProperty(Settings.PREF_WIDTH);
     private DoubleProperty height = new SimpleDoubleProperty(Settings.PREF_HEIGHT);
 
-    private Map<EntityType, Double> offsetXs = new HashMap<>();
-    private Map<EntityType, Double> offsetYs = new HashMap<>();
-    
     private Loader loader;
     private FXMLLoader characterLoader = new  FXMLLoader(getClass().getResource("/FXML/Character.fxml"));
+    
+    private List<ImageView> backgroundImages = new LinkedList<>();
     Game(Loader loader) {
         this.loader = loader;
 
         canvas.setPrefSize(Settings.PREF_WIDTH, Settings.PREF_HEIGHT);
         canvas.maxHeightProperty().bind(height);
         canvas.maxWidthProperty().bind(width);
-
-        // Loading meta info
-        // TODO: more types
-        offsetXs.put(EntityType.CALABASH_BRO_I, loader.loadEntityOffsetX(EntityType.CALABASH_BRO_I));
-        offsetXs.put(EntityType.CALABASH_BRO_III, loader.loadEntityOffsetX(EntityType.CALABASH_BRO_III));
-        offsetXs.put(EntityType.CONCRETE, loader.loadEntityOffsetX(EntityType.CONCRETE));
-
-        offsetYs.put(EntityType.CALABASH_BRO_I, loader.loadEntityOffsetY(EntityType.CALABASH_BRO_I));
-        offsetYs.put(EntityType.CALABASH_BRO_III, loader.loadEntityOffsetY(EntityType.CALABASH_BRO_III));
-        offsetYs.put(EntityType.CONCRETE, loader.loadEntityOffsetY(EntityType.CONCRETE));
 
         // Setting Camera
         DoubleBinding camXBindings = Bindings.createDoubleBinding(()->{
@@ -112,6 +110,8 @@ class Game{
         camX.bind(camXBindings);
         camY.bind(camYBindings);
 
+        
+        // Adding and removing elements
         elements.addListener((MapChangeListener.Change<? extends Integer, ? extends Element> change) ->{
                 if(change.wasAdded()){
                     Element e = change.getValueAdded();
@@ -138,20 +138,72 @@ class Game{
                             node = new ImageView(getClass().getResource(location).toString());
                             break;
                     }
-                    double offsetX = offsetXs.get(e.elementType);
-                    double offsetY = offsetYs.get(e.elementType);
+                    double offsetX = loader.loadEntityOffsetX(e.elementType);
+                    double offsetY = loader.loadEntityOffsetY(e.elementType);
 
                     node.layoutXProperty().bind(e.x.subtract(camX).subtract(offsetX));
                     node.layoutYProperty().bind(camY.subtract(e.y).subtract(offsetY));
                     e.node = node;
+
+                    canvas.getChildren().add(node);
                 }
 
                 if(change.wasRemoved()){
-                    //TODO  
+                    Element e = change.getValueRemoved();
+                    canvas.getChildren().remove(e.node);
                 }
                 
             }
         );
+
+        // Add key press handler
+        scene.setOnKeyPressed(event->{
+            try{
+                switch(event.getCode()){
+                    case A:
+                    case LEFT:
+                        outputStream.writeByte(RequestProtocol.MOVE_LEFT);
+                        break;
+                    case D:
+                    case RIGHT:
+                        outputStream.writeByte(RequestProtocol.MOVE_RIGHT);
+                        break;
+                    case SPACE:
+                    case UP:
+                        outputStream.writeByte(RequestProtocol.JUMP);
+                        break;
+                    case E:
+                    case NUMPAD0:
+                        outputStream.writeByte(RequestProtocol.PUNCH);
+                        break;
+                    case R:
+                    case NUMPAD1:
+                        outputStream.writeByte(RequestProtocol.SUPERMODE);
+                }
+            }catch(IOException e){
+                e.printStackTrace();
+            }
+            
+        });
+
+        scene.setOnKeyReleased(event->{
+            try{
+                switch(event.getCode()){
+                    case A:
+                    case LEFT:
+                    case D:
+                    case RIGHT:
+                        outputStream.writeByte(RequestProtocol.STOP);
+                        break;
+                    case R:
+                    case NUMPAD1:
+                        outputStream.writeByte(RequestProtocol.STOP_SUPER_MODE);
+                }
+            }catch(IOException e){
+                e.printStackTrace();
+            }
+        });
+    
     }
 
     void connect(String serverName, String name, EntityType calabashType) throws UnknownHostException, IOException{
@@ -196,6 +248,27 @@ class Game{
         }
     }
 
+    private void setBackground(String background){
+        // Background must be placed in the middle
+        canvas.getChildren().removeAll(backgroundImages);
+        backgroundImages.clear();
+        Image image = new Image(getClass().getResource("/Backgrounds/"+background).toString());
+        double imageWidth = image.getWidth();
+        double canvasWidth = width.get();
+        int halfNum = (int)Math.ceil((canvasWidth - imageWidth) / 2 / imageWidth);
+        // halfNum will not be negative
+        for(int i = -halfNum;i <= halfNum;i++){
+            ImageView imageView = new ImageView(image);
+            DoubleProperty x = new SimpleDoubleProperty(imageWidth * (i - 0.5));
+            DoubleProperty y = new SimpleDoubleProperty(image.getHeight());
+            imageView.layoutXProperty().bind(x.subtract(camX));
+            imageView.layoutYProperty().bind(camY.subtract(y));
+
+            backgroundImages.add(imageView);
+        }
+        canvas.getChildren().addAll(backgroundImages);
+
+    }
     private String readChars(DataInputStream in) throws IOException{
         StringBuilder sb = new StringBuilder();
         char c;
@@ -293,6 +366,12 @@ class Game{
                     Platform.runLater(()->{
                         width.set(w);
                         height.set(h);
+                    });
+                    break;
+                case ResponseProtocol.SET_BACKGROUND:
+                    name = readChars(inputStream);
+                    Platform.runLater(()->{
+                        setBackground(name);
                     });
                     break;
                 case ResponseProtocol.WINNER:

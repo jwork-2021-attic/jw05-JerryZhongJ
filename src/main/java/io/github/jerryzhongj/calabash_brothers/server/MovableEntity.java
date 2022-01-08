@@ -1,10 +1,11 @@
 package io.github.jerryzhongj.calabash_brothers.server;
 
+import io.github.jerryzhongj.calabash_brothers.EntityType;
 
-class MovableEntity extends Entity{
+abstract class MovableEntity extends Entity{
 
-    MovableEntity(World world, String name, double width, double height) {
-        super(world, name, height, width);
+    MovableEntity(World world, EntityType type, double width, double height) {
+        super(world, type, height, width);
         //TODO Auto-generated constructor stub
     }
 

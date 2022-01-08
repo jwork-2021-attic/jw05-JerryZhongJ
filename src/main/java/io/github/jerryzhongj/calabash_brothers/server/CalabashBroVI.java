@@ -9,11 +9,17 @@ class CalabashBroVI extends CalabashBro{
     private boolean invisible = false;
     
     CalabashBroVI(World world, String name) {
-        super(world, name, world.getLoader().loadEntityWidth(EntityType.CALABASH_BRO_VI), world.getLoader().loadEntityHeight(EntityType.CALABASH_BRO_VI));
+        super(world, EntityType.CALABASH_BRO_III,name, world.getLoader().loadEntityWidth(EntityType.CALABASH_BRO_VI), world.getLoader().loadEntityHeight(EntityType.CALABASH_BRO_VI));
     }
 
     @Override
-    public void superfy() {
+    public void superMode() {
+        // TODO Auto-generated method stub
+        
+    }
+
+    @Override
+    public void stopSuperMode() {
         // TODO Auto-generated method stub
         
     }

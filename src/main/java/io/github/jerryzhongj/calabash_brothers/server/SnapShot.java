@@ -10,14 +10,16 @@ class SnapShot {
 
     double width;
     double height;
+    String background;
     Map<Entity, World.Position> positions;
 
     Map<CalabashBro, Double> hps;
     Map<CalabashBro, Double> mps;
 
     String winner;
+    
 
-    public SnapShot(double width, double height, Map<Entity, Position> positions, Map<CalabashBro, Double> hps, Map<CalabashBro, Double> mps) {
+    public SnapShot(double width, double height, String background, Map<Entity, Position> positions, Map<CalabashBro, Double> hps, Map<CalabashBro, Double> mps) {
         this.width = width;
         this.height  = height;
         this.positions = positions;

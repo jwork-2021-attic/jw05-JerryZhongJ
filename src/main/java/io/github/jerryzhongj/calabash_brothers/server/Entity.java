@@ -1,10 +1,11 @@
 package io.github.jerryzhongj.calabash_brothers.server;
 
 
+import io.github.jerryzhongj.calabash_brothers.EntityType;
 import lombok.Getter;
 
 
-class Entity {
+abstract class Entity {
     
 
     @Getter
@@ -13,14 +14,14 @@ class Entity {
     private final double width;
     protected final World world;
     @Getter
-    private final String name;
+    private final EntityType type;
     // @Getter
     // private final double radius;
-    Entity(World world, String name, double width, double height) {
+    Entity(World world, EntityType type, double width, double height) {
         this.height = height;
         this.width = width;
         this.world = world;
-        this.name = name;
+        this.type = type;
 
         // check connective
         // for(int i = 0;i < boundary.length - 1;i++){

@@ -2,6 +2,7 @@ package io.github.jerryzhongj.calabash_brothers.server;
 
 import java.util.Set;
 
+import io.github.jerryzhongj.calabash_brothers.EntityType;
 import io.github.jerryzhongj.calabash_brothers.Settings;
 import io.github.jerryzhongj.calabash_brothers.server.World.UpdateOrder;
 import io.github.jerryzhongj.calabash_brothers.server.World.UpdateType;
@@ -19,10 +20,11 @@ abstract class CalabashBro extends MovableEntity{
     // facing left(false) or right(true)
     protected boolean facing = false;
     protected boolean superMode = false;
-
-    CalabashBro(World world, String name, double width, double height) {
-        super(world, name, width, height);
-        //TODO Auto-generated constructor stub
+    @Getter
+    protected String name;
+    CalabashBro(World world, EntityType type, String name, double width, double height) {
+        super(world, type, width, height);
+        this.name = name;
     }
 
     private double getDamage(){
@@ -116,6 +118,7 @@ abstract class CalabashBro extends MovableEntity{
         }, World.UpdateOrder.CALABASH_ACTION);
     }
 
-    abstract public void superfy();
+    abstract public void superMode();
+    abstract public void stopSuperMode();
 
 }

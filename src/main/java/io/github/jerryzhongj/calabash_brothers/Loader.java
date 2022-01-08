@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import io.github.jerryzhongj.calabash_brothers.server.World;
+import javafx.scene.layout.Background;
 
 
 
@@ -60,6 +61,9 @@ public class Loader {
                         height = Double.valueOf(tokens[1]);
                         world.setHeight(height);
                         break;
+                    case "background":
+                        world.setBackground(tokens[1]);
+                        break;
                     default:
                         String[] coord = tokens[1].split("\\s");
                         Double x = Double.valueOf(coord[0]);
@@ -91,57 +95,58 @@ public class Loader {
     }
 
     public double loadEntityWidth(EntityType type){
-        Double width = (Double)cachedPool.get("EntityWidth:"+type.getName());
-        if(width != null)
-            return width;
-        else{
-            loadEntityInfo(type);
-            return (Double)cachedPool.get("EntityWidth:"+type.getName());
-        }
+        loadEntityInfo();
+        Double weight = (Double)cachedPool.get("EntityWeight:"+type.getName());
+        if(weight == null)
+            throw new RuntimeException(String.format("%s's info is not found.", type.getName()));
+        return weight;
     }
 
     public double loadEntityHeight(EntityType type){
+        loadEntityInfo();
         Double height = (Double)cachedPool.get("EntityHeight:"+type.getName());
-        if(height != null)
-            return height;
-        else{
-            loadEntityInfo(type);
-            return (Double)cachedPool.get("EntityHeight:"+type.getName());
-        }
+        if(height == null)
+            throw new RuntimeException(String.format("%s's info is not found.", type.getName()));
+        return height;
     }
 
     public double loadEntityOffsetX(EntityType type){
+        loadEntityInfo();
         Double offsetx = (Double)cachedPool.get("EntityOffsetX:"+type.getName());
-        if(offsetx != null)
-            return offsetx;
-        else{
-            loadEntityInfo(type);
-            return (Double)cachedPool.get("EntityOffsetX:"+type.getName());
-        }
+        if(offsetx == null)
+            throw new RuntimeException(String.format("%s's info is not found.", type.getName()));
+        return offsetx;
     }
 
     public double loadEntityOffsetY(EntityType type){
+        loadEntityInfo();
         Double offsety = (Double)cachedPool.get("EntityOffsetY:"+type.getName());
-        if(offsety != null)
-            return offsety;
-        else{
-            loadEntityInfo(type);
-            return (Double)cachedPool.get("EntityOffsetY:"+type.getName());
-        }
+        if(offsety == null)
+            throw new RuntimeException(String.format("%s's info is not found.", type.getName()));
+        return offsety;
     }
     
-    private void loadEntityInfo(EntityType type){
-        String name = type.getName();
-        try(InputStream in = getClass().getResourceAsStream("/Entities/"+name);
+    boolean entityLoaded = false;
+    private void loadEntityInfo(){
+        if(entityLoaded)
+            return;
+
+        try(InputStream in = getClass().getResourceAsStream("/Entities");
         BufferedReader reader = new BufferedReader(new InputStreamReader(in, "UTF-8"))){
-            String line = reader.readLine();
-            String[] tokens = line.split("\\s");
-            cachedPool.put("EntityWidth:"+name, Double.valueOf(tokens[0]));
-            cachedPool.put("EntityHeight:"+name, Double.valueOf(tokens[1]));
-            cachedPool.put("EntityOffsetX:"+name, Double.valueOf(tokens[2]));
-            cachedPool.put("EntityOffsetY:"+name, Double.valueOf(tokens[3]));
+            String line;
+            while((line = reader.readLine()) != null){
+                String[] tokens = line.split("\\s*:\\s*");
+                String[] numbers = tokens[1].split("\\s");
+                cachedPool.put("EntityWidth:"+tokens[0], Double.valueOf(numbers[0]));
+                cachedPool.put("EntityHeight:"+tokens[0], Double.valueOf(numbers[1]));
+                cachedPool.put("EntityOffsetX:"+tokens[0], Double.valueOf(numbers[2]));
+                cachedPool.put("EntityOffsetY:"+tokens[0], Double.valueOf(numbers[3]));
+            }
+            
+            
         }catch(IOException e){
             e.printStackTrace();
         }
+        entityLoaded = true;
     }
 }
