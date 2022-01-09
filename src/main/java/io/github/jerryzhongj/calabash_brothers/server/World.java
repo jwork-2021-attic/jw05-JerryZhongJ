@@ -11,8 +11,6 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
-
-
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -23,7 +21,6 @@ import io.github.jerryzhongj.calabash_brothers.EntityType;
 import io.github.jerryzhongj.calabash_brothers.Loader;
 import io.github.jerryzhongj.calabash_brothers.Settings;
 import io.github.jerryzhongj.calabash_brothers.ThreadPool;
-import javafx.geometry.Pos;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -34,15 +31,14 @@ import lombok.Setter;
 public class World implements Serializable{
     private static final long serialVersionUID = 1403870569483406173L;
 
-    enum WorldStatus{
+    public enum WorldStatus{
         // END means the game finish, however STOP means world was forcely stop.
         PAUSE, RUNNING, END
     }
 
     @AllArgsConstructor
-    static class Position{
-        @Getter
-        final double x, y;
+    public static class Position{
+        public final double x, y;
 
         // public Position clone(){
         //     return new Position(x, y);
@@ -76,9 +72,9 @@ public class World implements Serializable{
     }
 
     @AllArgsConstructor
-    static class Velocity{
-        @Getter
-        final double vx, vy;
+    public static class Velocity{
+        
+        public final double vx, vy;
 
         Velocity add(double deltaVx, double deltaVy){
             return new Velocity( + deltaVx, vy + deltaVy);
@@ -98,38 +94,38 @@ public class World implements Serializable{
 
     }
 
-    enum UpdateOrder{
+    public enum UpdateOrder{
         // Should start with 0
         // The later update covers the earlier.
         // Due to overlaying problem, we have to put adding entity the last one.
         BASIC(0), CALABASH_ACTION(1), CAlABASH_SUPER(2), REMOVE_ENTITY(3), VALIDATION_CHECK(4), ADD_ENTITY(5);
         @Getter
-        final int priority;
+        private final int priority;
         private UpdateOrder(int priority){
             this.priority = priority;
         }
-        static int getTotalNum(){
+        public static int getTotalNum(){
             return UpdateOrder.values().length;
         }
     }
 
-    enum UpdateType{
+    public enum UpdateType{
         ONESHOT, FINITE, INFINTE, BINDTO
     }
 
     // All changes happen here
     // New state is computed based on the older one.
-    abstract class Update{
+    public abstract class Update{
         
-        final UpdateType type;
+        public final UpdateType type;
         // TimeUnit: millisecond
-        int remain;
+        public int remain;
         // TODO: BINDTO
-        Update(UpdateType type, int remain){
+        public Update(UpdateType type, int remain){
             this.type = type;
             this.remain = remain;
         }
-        Update(UpdateType type){
+        public Update(UpdateType type){
             this(type, 0);
         }
         abstract void update();
@@ -154,7 +150,6 @@ public class World implements Serializable{
         }
 
         protected void setVelocityX(MovableEntity me, double vx){
-            World world = World.this;
             Velocity v = newVelocities.get(me);
             if(v == null){
                 v = getVelocity(me);
@@ -355,7 +350,7 @@ public class World implements Serializable{
                 for(Map.Entry<MovableEntity, Velocity> entry : velocities.entrySet()){
                     MovableEntity me = entry.getKey();
                     double vy = entry.getValue().vy;
-                    if(vy >= -Settings.MAX_FALL_SPEED){
+                    if(vy >= -Settings.MAX_SPEED){
                         vy -= Settings.GRAVITY / Settings.UPDATE_RATE;
                         setVelocityY(me, vy);
                     }    
@@ -488,6 +483,11 @@ public class World implements Serializable{
                 return;
         }
         player.control(bro);
+        addCalabash(bro);
+        
+    }
+    
+    public void addCalabash(CalabashBro bro){
         livingCalabash.add(bro);
         velocities.put(bro, new Velocity(0,0));
         double randomX;
@@ -499,9 +499,7 @@ public class World implements Serializable{
             pos = new Position(randomX, randomY);
         }while(hasCollision(bro, pos));
         positions.put(bro, pos);
-        
     }
-    
     
     // All updates happen here. There is no other way to change the state of the world.
     // Updates must happen sequently.
@@ -603,6 +601,7 @@ public class World implements Serializable{
             System.out.println("Setup not finished!");
             return;
         }
+        status = WorldStatus.RUNNING;
         
         running = ThreadPool.scheduled.scheduleAtFixedRate(() -> {
             // TODO: exception handler
@@ -636,7 +635,7 @@ public class World implements Serializable{
         status = WorldStatus.END;
     }
 
-    void registerUpdate(Update e, UpdateOrder order){
+    public void registerUpdate(Update e, UpdateOrder order){
         updateQueues[order.getPriority()].add(e);
     }
 
@@ -699,7 +698,7 @@ public class World implements Serializable{
      * @param me
      * @return null if no such entity.
      */
-    Velocity getVelocity(Entity me){
+    public Velocity getVelocity(Entity me){
 
         Velocity v = null;
         try{
@@ -721,7 +720,7 @@ public class World implements Serializable{
      * @param me
      * @return null if no such entity
      */
-    Position getPosition(Entity me){
+    public Position getPosition(Entity me){
 
         Position pos = null;
         try{
@@ -743,7 +742,7 @@ public class World implements Serializable{
      * @param condition in what area
      * @return
      */
-    Set<Entity> getEntityAround(Entity e, Predicate<Position> condition){
+    public Set<Entity> getEntityAround(Entity e, Predicate<Position> condition){
         Position ePos = null;
         Set<Entity> result = new HashSet<>();
         try{
@@ -768,7 +767,7 @@ public class World implements Serializable{
         return result;
     }
 
-    SnapShot getSnapShot(){
+    public SnapShot getSnapShot(){
         SnapShot snapshot = new SnapShot();
 
         snapshot.width = width;

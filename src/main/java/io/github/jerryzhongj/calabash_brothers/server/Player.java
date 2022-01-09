@@ -21,54 +21,65 @@ import io.github.jerryzhongj.calabash_brothers.server.World.Position;
 
 import lombok.Getter;
 
-class Player implements Subscriber<SnapShot>{
+public class Player implements Subscriber<SnapShot>{
     
     // This is used when setting up the world
     @Getter
     private EntityType calabashType;
     @Getter
     private String name;
+    @Getter
+    private CalabashBro calabash = null;
 
     private ByteBuffer readBuffer = ByteBuffer.allocate(1024);
     private ByteBuffer writeBuffer = ByteBuffer.allocate(1024);
 
-    private CalabashBro calabash = null;
+    
     private boolean firstReponse = true;
 
     void read(SocketChannel client){
         try {
             client.read(readBuffer);
             readBuffer.flip();
+
             readBuffer.mark();
             while(true){
                 try{
                     byte command = readBuffer.get();
+                    // System.out.printf("%s get command %h\n", name, command);
                     switch(command){
                         case RequestProtocol.SET_NAME:
-                            name = getString(readBuffer);
+                            name = readString(readBuffer);
+                            System.out.printf("%s: SET_NAME %s.\n", name, name);
                             break;
                         case RequestProtocol.SET_CALABASH:
                             calabashType = EntityType.getType(readBuffer.getInt());
+                            System.out.printf("%s: SET_CALABASH %s.\n", name, calabashType.getName());
                             break;
                         case RequestProtocol.MOVE_LEFT:
                             if(calabash != null && calabash.isAlive())
                                 calabash.moveLeft();
+                            System.out.printf("%s: MOVE_LEFT.\n", name);
                             break;
                         case RequestProtocol.MOVE_RIGHT:
                             if(calabash != null && calabash.isAlive())
                                 calabash.moveRight();
+                            System.out.printf("%s: MOVE_RIGHT.\n", name);
                             break;
                         case RequestProtocol.STOP:
                             if(calabash != null && calabash.isAlive())
                                 calabash.stop();
+                            System.out.printf("%s: STOP.\n", name);
                             break;
                         case RequestProtocol.JUMP:
                             if(calabash != null && calabash.isAlive())
                                 calabash.jump();
+                            System.out.printf("%s: JUMP.\n", name);
                             break;
                         case RequestProtocol.PUNCH:
                             if(calabash != null && calabash.isAlive())
                                 calabash.punch();
+                            System.out.printf("%s: PUNCH.\n", name);
                             break;
                         case RequestProtocol.SUPERMODE:
                             if(calabash != null && calabash.isAlive())
@@ -79,15 +90,17 @@ class Player implements Subscriber<SnapShot>{
                                 calabash.stopSuperMode();
                             break;
                     }
-                    // Mark when a whole command complete
-                    readBuffer.mark();
                 }catch(BufferUnderflowException e){
+                    readBuffer.reset();
                     break;
                 }
+                // Mark when a whole command complete
+                readBuffer.mark();
             }
             
         } catch (IOException e) {
             e.printStackTrace();
+            System.exit(1);
         }finally{
             readBuffer.compact();
         }
@@ -101,6 +114,7 @@ class Player implements Subscriber<SnapShot>{
                 client.write(writeBuffer);
             } catch (IOException e) {
                 e.printStackTrace();
+                System.exit(0);
             }finally{
                 writeBuffer.compact();
                 writeBuffer.notifyAll();
@@ -112,52 +126,59 @@ class Player implements Subscriber<SnapShot>{
 
     }
 
-    private String getString(ByteBuffer buffer) throws BufferUnderflowException{
-        StringBuilder sb = new StringBuilder();
-        char c;
-        do{
-            c = buffer.getChar();
-            sb.append(c);
-        }while(c != '\0');
-        return sb.toString();
+    private String readString(ByteBuffer buffer) throws BufferUnderflowException{
+        int byte_len = buffer.getInt();
+        byte[] bytes = new byte[byte_len];
+        buffer.get(bytes);
+        return new String(bytes);
     }
 
     private void writeBuffer(byte b) throws InterruptedException{
         synchronized(writeBuffer){
-            try{
-                writeBuffer.put(b);
-            }catch(BufferOverflowException e){
-                writeBuffer.wait();
-                writeBuffer.put(b);
+            while(true){
+                try{
+                    writeBuffer.put(b);
+                    break;
+                }catch(BufferOverflowException e){
+                    writeBuffer.wait();
+                }
             }
+            
         }
     }
 
     private void writeBuffer(int i) throws InterruptedException{
         synchronized(writeBuffer){
-            try{
-                writeBuffer.putInt(i);
-            }catch(BufferOverflowException e){
-                writeBuffer.wait();
-                writeBuffer.putInt(i);
+            while(true){
+                try{
+                    writeBuffer.putInt(i);
+                    break;
+                }catch(BufferOverflowException e){
+                    writeBuffer.wait();
+                }
             }
+            
         }
     }
 
     private void writeBuffer(double d) throws InterruptedException{
         synchronized(writeBuffer){
-            try{
-                writeBuffer.putDouble(d);
-            }catch(BufferOverflowException e){
-                writeBuffer.wait();
-                writeBuffer.putDouble(d);
+            while(true){
+                try{
+                    writeBuffer.putDouble(d);
+                    break;
+                }catch(BufferOverflowException e){
+                    writeBuffer.wait();
+                }
             }
+            
         }
     }
 
     private void writeBuffer(String s) throws InterruptedException{
         byte[] str = s.getBytes();
         synchronized(writeBuffer){
+            writeBuffer(str.length);
             for(int i = 0;i < str.length;){
                 try{
                     writeBuffer.put(str[i]);
@@ -187,7 +208,7 @@ class Player implements Subscriber<SnapShot>{
     @Override
     public void onError(Throwable throwable) {
         throwable.printStackTrace();
-        
+        System.exit(1);
     }
 
     private SnapShot oldSnapShot = new SnapShot();
@@ -228,7 +249,7 @@ class Player implements Subscriber<SnapShot>{
             }
 
             // SET_BACKGROUND
-            if(background != oldSnapShot.background){
+            if(!background.equals(oldSnapShot.background)){
                 writeBuffer(ResponseProtocol.SET_BACKGROUND);
                 writeBuffer(background);
             }
@@ -277,7 +298,7 @@ class Player implements Subscriber<SnapShot>{
                 CalabashBro bro = entry.getKey();
                 double hp = entry.getValue();
                 Double oldHp = oldSnapShot.hps.get(bro);
-                if(oldHp == null || Math.abs(hp - oldHp) < 0.1){
+                if(oldHp == null || Math.abs(hp - oldHp) > 0.1){
                     writeBuffer(ResponseProtocol.SET_HP);
                     writeBuffer(bro.hashCode());
                     writeBuffer(hp);
@@ -291,7 +312,7 @@ class Player implements Subscriber<SnapShot>{
                 CalabashBro bro = entry.getKey();
                 double mp = entry.getValue();
                 Double oldMp = oldSnapShot.mps.get(bro);
-                if(oldMp == null || Math.abs(mp - oldMp) < 0.1){
+                if(oldMp == null || Math.abs(mp - oldMp) > 0.1){
                     writeBuffer(ResponseProtocol.SET_MP);
                     writeBuffer(bro.hashCode());
                     writeBuffer(mp);
@@ -337,4 +358,5 @@ class Player implements Subscriber<SnapShot>{
         subscription.request(1);
         
     }
+
 }

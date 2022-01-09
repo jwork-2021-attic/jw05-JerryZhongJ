@@ -1,7 +1,8 @@
-package io.github.jerryzhongj.calabash_brothers.sever;
+package io.github.jerryzhongj.calabash_brothers;
 
 import static org.junit.Assert.assertTrue;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import io.github.jerryzhongj.calabash_brothers.Loader;
@@ -21,10 +22,9 @@ public class WorldTest
         Loader loader = new Loader();
         World world = loader.loadInitialWorld("default");
         CalabashBroI b1 = new CalabashBroI(world, "Bro1");
-        CalabashBroI b2 = new CalabashBroI(world, "Bro2");
-        world.setPlayer(b1, 50, 50);
-        world.setPlayer(b2, -50, 50);
-        world.ready();
+        CalabashBro b2 = new CalabashBroI(world, "Bro2");
+        world.addCalabash(b1);
+        world.addCalabash(b2);
         world.resume();
         try {
             Thread.sleep(5000);
@@ -36,10 +36,9 @@ public class WorldTest
                 Thread.sleep(500);
             }
         } catch (InterruptedException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
+        assertTrue(true);
 
-        
     }
 }

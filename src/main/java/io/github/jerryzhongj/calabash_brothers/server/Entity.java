@@ -5,7 +5,7 @@ import io.github.jerryzhongj.calabash_brothers.EntityType;
 import lombok.Getter;
 
 
-abstract class Entity {
+public abstract class Entity {
     
 
     @Getter
@@ -17,7 +17,7 @@ abstract class Entity {
     private final EntityType type;
     // @Getter
     // private final double radius;
-    Entity(World world, EntityType type, double width, double height) {
+    public Entity(World world, EntityType type, double width, double height) {
         this.height = height;
         this.width = width;
         this.world = world;

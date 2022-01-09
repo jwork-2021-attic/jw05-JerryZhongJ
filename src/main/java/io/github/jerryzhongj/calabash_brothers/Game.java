@@ -3,46 +3,34 @@ package io.github.jerryzhongj.calabash_brothers;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
-
 
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.DoubleBinding;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
-
 import javafx.beans.property.MapProperty;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.Property;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleMapProperty;
-import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.MapChangeListener;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import lombok.Getter;
 
 
-class Game{
+public class Game{
     private DataInputStream inputStream;
     private DataOutputStream outputStream;
     private Pane canvas = new Pane();
@@ -55,12 +43,12 @@ class Game{
     private DoubleProperty camY = new SimpleDoubleProperty();
     private DoubleProperty width = new SimpleDoubleProperty(Settings.PREF_WIDTH);
     private DoubleProperty height = new SimpleDoubleProperty(Settings.PREF_HEIGHT);
-
+    @Getter
     private Loader loader;
     private FXMLLoader characterLoader = new  FXMLLoader(getClass().getResource("/FXML/Character.fxml"));
     
     private List<ImageView> backgroundImages = new LinkedList<>();
-    Game(Loader loader) {
+    public Game(Loader loader) {
         this.loader = loader;
 
         canvas.setPrefSize(Settings.PREF_WIDTH, Settings.PREF_HEIGHT);
@@ -206,12 +194,14 @@ class Game{
     
     }
 
-    void connect(String serverName, String name, EntityType calabashType) throws UnknownHostException, IOException{
+    public void connect(String serverName, String name, EntityType calabashType) throws UnknownHostException, IOException{
         Socket server = new Socket(serverName, Settings.PORT);
         outputStream = new DataOutputStream(server.getOutputStream());
         inputStream = new DataInputStream(server.getInputStream());
         outputStream.write(RequestProtocol.SET_NAME);
-        outputStream.writeChars(name);
+        byte[] bytes = name.getBytes();
+        outputStream.writeInt(bytes.length);
+        outputStream.write(bytes);
         outputStream.write(RequestProtocol.SET_CALABASH);
         outputStream.write(calabashType.getCode());
 
@@ -226,7 +216,7 @@ class Game{
         }).start();
     }
 
-    static class Element{
+    private static class Element{
 
         DoubleProperty x = new SimpleDoubleProperty(0);
         DoubleProperty y = new SimpleDoubleProperty(0);
@@ -239,7 +229,7 @@ class Game{
         
     }
 
-    static class Character extends Element{
+    private static class Character extends Element{
         StringProperty name;
         DoubleProperty hp;
         DoubleProperty mp;
@@ -269,14 +259,12 @@ class Game{
         canvas.getChildren().addAll(backgroundImages);
 
     }
-    private String readChars(DataInputStream in) throws IOException{
-        StringBuilder sb = new StringBuilder();
-        char c;
-        do{
-            c = in.readChar();
-            sb.append(c);
-        }while(c != '\0');
-        return sb.toString();
+    
+    private String readString(DataInputStream in) throws IOException{
+        int byte_len = in.readInt();
+        byte[] bytes = new byte[byte_len];
+        in.read(bytes);
+        return new String(bytes);
     }
 
     private void recieveData() throws IOException{
@@ -315,7 +303,7 @@ class Game{
                     break;
                 case ResponseProtocol.SET_NAME:
                     id = inputStream.readInt();
-                    String name = readChars(inputStream);
+                    String name = readString(inputStream);
                     e = elements.get(id);
                     if(e != null && e instanceof Character){
                         Platform.runLater(()->{
@@ -360,7 +348,6 @@ class Game{
                     }
                     break;
                 case ResponseProtocol.SET_SIZE:
-                    id = inputStream.readInt();
                     double w = inputStream.readDouble();
                     double h = inputStream.readDouble();
                     Platform.runLater(()->{
@@ -369,7 +356,7 @@ class Game{
                     });
                     break;
                 case ResponseProtocol.SET_BACKGROUND:
-                    name = readChars(inputStream);
+                    name = readString(inputStream);
                     Platform.runLater(()->{
                         setBackground(name);
                     });

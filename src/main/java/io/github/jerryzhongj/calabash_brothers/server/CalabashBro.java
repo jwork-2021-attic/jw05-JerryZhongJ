@@ -9,7 +9,7 @@ import io.github.jerryzhongj.calabash_brothers.server.World.UpdateType;
 import lombok.Getter;
 
 
-abstract class CalabashBro extends MovableEntity{
+public abstract class CalabashBro extends MovableEntity{
     @Getter
     protected double hp = Settings.MAX_HP;
     @Getter
@@ -50,7 +50,7 @@ abstract class CalabashBro extends MovableEntity{
         return hp > 0;
     }
     // for Controller
-    void punch(){
+    public void punch(){
         final boolean facing = this.facing;
         Set<Entity> entities = world.getEntityAround(this, position -> {
             double x = position.x * ( facing ? 1 : -1 );

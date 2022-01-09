@@ -2,7 +2,7 @@ package io.github.jerryzhongj.calabash_brothers;
 
 public class RequestProtocol {
     
-    // SET_NAME name:string
+    // SET_NAME byte_len:int name:string
     public static final byte SET_NAME = 0x0;
     // SET_CALABASH calabash
     public static final byte SET_CALABASH = 0x1;

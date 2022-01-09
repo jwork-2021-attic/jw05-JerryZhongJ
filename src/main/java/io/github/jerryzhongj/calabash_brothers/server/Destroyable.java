@@ -1,6 +1,6 @@
 package io.github.jerryzhongj.calabash_brothers.server;
 
-interface Destroyable {
+public interface Destroyable {
     void destroy();
     
 }

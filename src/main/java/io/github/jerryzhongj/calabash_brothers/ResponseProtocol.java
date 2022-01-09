@@ -1,5 +1,7 @@
 package io.github.jerryzhongj.calabash_brothers;
 
+
+
 public class ResponseProtocol {
 
     // SET_SIZE w:double h:double
@@ -28,13 +30,13 @@ public class ResponseProtocol {
     // SET_HP id:int mp:double
     public static final byte SET_MP = 0x8;
 
-    // SET_HP id name:string (max length: 30)
+    // SET_HP id byte_len:int name:string (max length: 30)
     public static final byte SET_NAME = 0x9;
     
     // COUNT_DOWN num:byte
     public static final byte COUNT_DOWN = 0xa;
 
-    // WINNER name:string
+    // WINNER byte_len:int name:string
     public static final byte WINNER = 0xb;
 
     public static final byte LOSE = 0xc;

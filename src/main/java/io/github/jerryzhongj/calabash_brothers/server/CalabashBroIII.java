@@ -1,6 +1,5 @@
 package io.github.jerryzhongj.calabash_brothers.server;
 
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import io.github.jerryzhongj.calabash_brothers.EntityType;
@@ -9,7 +8,7 @@ import io.github.jerryzhongj.calabash_brothers.ThreadPool;
 
 public class CalabashBroIII extends CalabashBro{
 
-    CalabashBroIII(World world, String name) {
+    public CalabashBroIII(World world, String name) {
         super(world, EntityType.CALABASH_BRO_III, name, world.getLoader().loadEntityWidth(EntityType.CALABASH_BRO_III), world.getLoader().loadEntityHeight(EntityType.CALABASH_BRO_III));
 
         protectFactor = Settings.CALABASH_III_INITIAL_PROTECT;

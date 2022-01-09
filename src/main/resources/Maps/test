@@ -1,0 +1,8 @@
+width: 1000
+height: 1000
+background: mountains.jpg
+Earth: 0 100
+Earth: 200 300
+Earth: -200 300
+Earth: 400 500
+Earth: -400 500

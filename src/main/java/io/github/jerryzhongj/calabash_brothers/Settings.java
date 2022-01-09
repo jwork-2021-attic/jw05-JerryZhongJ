@@ -9,11 +9,11 @@ public class Settings {
     public static final int UPDATE_RATE = 60;
     public static final int FPS = 24;
 
-    public static final double BOUNDARY_SHORT = 3;
-    public static final double BOUNDARY_LONG = 20;
+    public static final double BOUNDARY_SHORT = 10;
+    public static final double BOUNDARY_LONG = 50;
 
-    public static final double GRAVITY = 10;
-    public static final double MAX_FALL_SPEED = 50;
+    public static final double GRAVITY = 200;
+    public static final double MAX_SPEED = 400;
 
     public static final double MAX_HP = 100;
     public static final double MAX_MP = 100;
@@ -21,10 +21,10 @@ public class Settings {
     public static final double DEFAULT_SPEED = 20;
     public static final double DEFAULT_DAMAGE = 10;   
     
-    public static final double ATTACK_HEIGHT = 10;
-    public static final double ATTACK_LENGTH = 20;
-    public static final double GET_PUNCH_VELOCITY_X = 10;
-    public static final double GET_PUNCH_VELOCITY_Y = 10;
+    public static final double ATTACK_HEIGHT = 100;
+    public static final double ATTACK_LENGTH = 200;
+    public static final double GET_PUNCH_VELOCITY_X = 20;
+    public static final double GET_PUNCH_VELOCITY_Y = 20;
     
     public static final double SUPER_MP_COST = 20;
     public static final int SUPER_TIME_LIMIT = 10000;

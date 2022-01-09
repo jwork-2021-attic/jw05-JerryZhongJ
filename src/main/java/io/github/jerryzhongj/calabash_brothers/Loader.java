@@ -8,7 +8,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import io.github.jerryzhongj.calabash_brothers.server.World;
-import javafx.scene.layout.Background;
 
 
 
@@ -96,7 +95,7 @@ public class Loader {
 
     public double loadEntityWidth(EntityType type){
         loadEntityInfo();
-        Double weight = (Double)cachedPool.get("EntityWeight:"+type.getName());
+        Double weight = (Double)cachedPool.get("EntityWidth:"+type.getName());
         if(weight == null)
             throw new RuntimeException(String.format("%s's info is not found.", type.getName()));
         return weight;
