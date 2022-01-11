@@ -6,19 +6,16 @@ import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.HashMap;
-
+import java.util.List;
 import java.util.Map;
-
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
-
-
 
 import io.github.jerryzhongj.calabash_brothers.EntityType;
 import io.github.jerryzhongj.calabash_brothers.RequestProtocol;
 import io.github.jerryzhongj.calabash_brothers.ResponseProtocol;
 import io.github.jerryzhongj.calabash_brothers.server.World.Position;
-
+import javafx.util.Pair;
 import lombok.Getter;
 
 public class Player implements Subscriber<SnapShot>{
@@ -50,36 +47,36 @@ public class Player implements Subscriber<SnapShot>{
                     switch(command){
                         case RequestProtocol.SET_NAME:
                             name = readString(readBuffer);
-                            System.out.printf("%s: SET_NAME %s.\n", name, name);
+                            // System.out.printf("%s: SET_NAME %s.\n", name, name);
                             break;
                         case RequestProtocol.SET_CALABASH:
                             calabashType = EntityType.getType(readBuffer.getInt());
-                            System.out.printf("%s: SET_CALABASH %s.\n", name, calabashType.getName());
+                            // System.out.printf("%s: SET_CALABASH %s.\n", name, calabashType.getName());
                             break;
                         case RequestProtocol.MOVE_LEFT:
                             if(calabash != null && calabash.isAlive())
                                 calabash.moveLeft();
-                            System.out.printf("%s: MOVE_LEFT.\n", name);
+                            // System.out.printf("%s: MOVE_LEFT.\n", name);
                             break;
                         case RequestProtocol.MOVE_RIGHT:
                             if(calabash != null && calabash.isAlive())
                                 calabash.moveRight();
-                            System.out.printf("%s: MOVE_RIGHT.\n", name);
+                            // System.out.printf("%s: MOVE_RIGHT.\n", name);
                             break;
                         case RequestProtocol.STOP:
                             if(calabash != null && calabash.isAlive())
                                 calabash.stop();
-                            System.out.printf("%s: STOP.\n", name);
+                            // System.out.printf("%s: STOP.\n", name);
                             break;
                         case RequestProtocol.JUMP:
                             if(calabash != null && calabash.isAlive())
                                 calabash.jump();
-                            System.out.printf("%s: JUMP.\n", name);
+                            // System.out.printf("%s: JUMP.\n", name);
                             break;
                         case RequestProtocol.PUNCH:
                             if(calabash != null && calabash.isAlive())
                                 calabash.punch();
-                            System.out.printf("%s: PUNCH.\n", name);
+                            // System.out.printf("%s: PUNCH.\n", name);
                             break;
                         case RequestProtocol.SUPERMODE:
                             if(calabash != null && calabash.isAlive())
@@ -190,6 +187,20 @@ public class Player implements Subscriber<SnapShot>{
         }
     }
 
+    private void writeBuffer(boolean b) throws InterruptedException{
+        synchronized(writeBuffer){
+            while(true){
+                try{
+                    writeBuffer.putInt(b ? 1 : 0);
+                    break;
+                }catch(BufferOverflowException e){
+                    writeBuffer.wait();
+                }
+            }
+            
+        }
+    }
+
     boolean isReady(){
         return name != null && calabashType != null;
     }
@@ -218,6 +229,7 @@ public class Player implements Subscriber<SnapShot>{
         Map<Entity, World.Position> positions = new HashMap<>(item.positions);;
         Map<CalabashBro, Double> hps = new HashMap<>(item.hps);
         Map<CalabashBro, Double> mps = new HashMap<>(item.mps);
+        Map<CalabashBro, Boolean> facings = new HashMap<>(item.facings);
         double width = item.width;
         double height = item.height;
         String background = item.background;
@@ -238,6 +250,10 @@ public class Player implements Subscriber<SnapShot>{
 
         try{
             // Start to write
+
+            if(firstReponse)
+                writeBuffer(ResponseProtocol.START_GAME);
+            
             // SET width height
             if(Math.abs(oldSnapShot.width - width) > 0.5 || Math.abs(oldSnapShot.height - height) > 0.5){
                 writeBuffer(ResponseProtocol.SET_SIZE);
@@ -264,14 +280,7 @@ public class Player implements Subscriber<SnapShot>{
                 if(oldPos == null){
                     writeBuffer(ResponseProtocol.ADD);
                     writeBuffer(e.hashCode());
-                    if(e instanceof CalabashBroI)
-                        writeBuffer(EntityType.CALABASH_BRO_I.getCode());
-                    if(e instanceof CalabashBroIII)
-                        writeBuffer(EntityType.CALABASH_BRO_III.getCode());
-                    if(e instanceof Earth)
-                        writeBuffer(EntityType.Earth.getCode());
-                    // TODO: more types
-
+                    writeBuffer(e.getType().getCode());
                 }
 
                 if(oldPos == null || Math.abs(oldPos.x - pos.x) > 0.5 || Math.abs(oldPos.y - pos.y) > 0.5){
@@ -279,6 +288,7 @@ public class Player implements Subscriber<SnapShot>{
                     writeBuffer(e.hashCode());
                     writeBuffer(pos.x);
                     writeBuffer(pos.y);
+
                 }else{
                     entry.setValue(oldPos);
                 }
@@ -293,7 +303,7 @@ public class Player implements Subscriber<SnapShot>{
                 writeBuffer(entry.getKey().hashCode());
             }
 
-            // SET HP MP
+            // SET HP
             for(Map.Entry<CalabashBro, Double> entry : hps.entrySet()){
                 CalabashBro bro = entry.getKey();
                 double hp = entry.getValue();
@@ -308,6 +318,7 @@ public class Player implements Subscriber<SnapShot>{
                 
             }
 
+            // SET MP
             for(Map.Entry<CalabashBro, Double> entry : mps.entrySet()){
                 CalabashBro bro = entry.getKey();
                 double mp = entry.getValue();
@@ -321,7 +332,18 @@ public class Player implements Subscriber<SnapShot>{
                 }
             }
 
-            
+            //SET FACING
+            for(Map.Entry<CalabashBro, Boolean> entry : facings.entrySet()){
+                CalabashBro bro = entry.getKey();
+                boolean facing = entry.getValue();
+                Boolean oldFacing = oldSnapShot.facings.get(bro);
+                if(oldFacing == null || facing != oldFacing){
+                    writeBuffer(ResponseProtocol.SET_FACING);
+                    writeBuffer(bro.hashCode());
+                    writeBuffer(facing);
+                }
+            }
+
             if(firstReponse){
                 writeBuffer(ResponseProtocol.ANCHOR);
                 writeBuffer(calabash.hashCode());
@@ -343,11 +365,12 @@ public class Player implements Subscriber<SnapShot>{
             }
         }catch(InterruptedException e){
             e.printStackTrace();
+            return;
         }
         
 
         // Save old snapshot
-        oldSnapShot = new SnapShot(width, height, background, positions, hps, mps);
+        oldSnapShot = new SnapShot(width, height, background, positions, hps, mps, facings);
         
         subscription.request(1);
     }
@@ -357,6 +380,22 @@ public class Player implements Subscriber<SnapShot>{
         this.subscription = subscription;
         subscription.request(1);
         
+    }
+
+    public void sendPlayerList(List<Pair<String, EntityType>> list){
+        try {
+            writeBuffer(ResponseProtocol.PLAYER_LIST);
+            writeBuffer(list.size());
+            for(Pair<String, EntityType> pair : list){
+                writeBuffer(pair.getKey());
+                writeBuffer(pair.getValue().getCode());
+            }
+        } catch (InterruptedException e) {
+            
+            e.printStackTrace();
+            return;
+        }
+
     }
 
 }

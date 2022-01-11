@@ -4,7 +4,7 @@ public class Settings {
     public static final int PORT = 7777;
     public static final int SCHEDULED_POOL_SIZE = 4;
     public static final double PREF_HEIGHT = 800;
-    public static final double PREF_WIDTH = 600;
+    public static final double PREF_WIDTH = 1000;
 
     public static final int UPDATE_RATE = 60;
     public static final int FPS = 24;
@@ -12,19 +12,20 @@ public class Settings {
     public static final double BOUNDARY_SHORT = 10;
     public static final double BOUNDARY_LONG = 50;
 
-    public static final double GRAVITY = 200;
+    public static final double GRAVITY = 400;
+    public static final double FRACTION = 200;
     public static final double MAX_SPEED = 400;
 
     public static final double MAX_HP = 100;
     public static final double MAX_MP = 100;
 
-    public static final double DEFAULT_SPEED = 20;
-    public static final double DEFAULT_DAMAGE = 10;   
+    public static final double DEFAULT_SPEED = 400;
+    public static final double DEFAULT_DAMAGE = 4;   
     
     public static final double ATTACK_HEIGHT = 100;
     public static final double ATTACK_LENGTH = 200;
-    public static final double GET_PUNCH_VELOCITY_X = 20;
-    public static final double GET_PUNCH_VELOCITY_Y = 20;
+    public static final double GET_PUNCH_VELOCITY_X = 150;
+    public static final double GET_PUNCH_VELOCITY_Y = 150;
     
     public static final double SUPER_MP_COST = 20;
     public static final int SUPER_TIME_LIMIT = 10000;

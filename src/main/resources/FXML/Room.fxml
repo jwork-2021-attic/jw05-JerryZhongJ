@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ChoiceBox?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+<?import javafx.scene.text.Text?>
+<?import javafx.collections.FXCollections?>
+<?import java.lang.String?>
+
+<StackPane prefHeight="800.0" prefWidth="1000.0" style="-fx-background-image: url(&quot;/Backgrounds/menu.jpeg&quot;); -fx-background-size: 100% 100%;" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1">
+   <children>
+      <VBox>
+         <children>
+            <HBox alignment="CENTER" spacing="50.0">
+               <children>
+                  <Text strokeType="OUTSIDE" strokeWidth="0.0" text="选择地图">
+                     <font>
+                        <Font size="24.0" />
+                     </font>
+                  </Text>
+                  <ChoiceBox fx:id="chooseMap" prefWidth="150.0" value="default">
+                     <items>
+                        <FXCollections fx:factory="observableArrayList">
+                              <String fx:value="default" />
+                              <String fx:value="test" />
+                        </FXCollections>
+                     </items>
+                  </ChoiceBox>
+               </children>
+            </HBox>
+            <FlowPane fx:id="playerList" alignment="CENTER" columnHalignment="CENTER" prefHeight="560.0" prefWidth="800.0" prefWrapLength="450.0" vgap="10.0" />
+            <HBox alignment="CENTER" spacing="50.0">
+               <children>
+                  <Button mnemonicParsing="false" onAction="#back" text="返回">
+                     <font>
+                        <Font size="24.0" />
+                     </font>
+                  </Button>
+                  <Button fx:id="startGameButton" mnemonicParsing="false" onAction="#startGame" text="开始游戏">
+                     <font>
+                        <Font size="24.0" />
+                     </font>
+                  </Button>
+               </children>
+            </HBox>
+         </children>
+      </VBox>
+   </children>
+</StackPane>

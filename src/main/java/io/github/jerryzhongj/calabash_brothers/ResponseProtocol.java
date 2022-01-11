@@ -33,13 +33,20 @@ public class ResponseProtocol {
     // SET_HP id byte_len:int name:string (max length: 30)
     public static final byte SET_NAME = 0x9;
     
+    // SET_FACING id facing
+    public static final byte SET_FACING = 0xa;
+
     // COUNT_DOWN num:byte
-    public static final byte COUNT_DOWN = 0xa;
+    public static final byte COUNT_DOWN = 0xb;
 
     // WINNER byte_len:int name:string
-    public static final byte WINNER = 0xb;
+    public static final byte WINNER = 0xc;
 
-    public static final byte LOSE = 0xc;
+    public static final byte LOSE = 0xd;
 
     public static final byte WAIT = 0xd;
+
+    public static final byte PLAYER_LIST = 0xe;
+
+    public static final byte START_GAME = 0xf;
 }

@@ -8,17 +8,24 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.SubmissionPublisher;
 import java.util.concurrent.TimeUnit;
 
+import io.github.jerryzhongj.calabash_brothers.EntityType;
 import io.github.jerryzhongj.calabash_brothers.Loader;
 import io.github.jerryzhongj.calabash_brothers.Settings;
 import io.github.jerryzhongj.calabash_brothers.ThreadPool;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.util.Pair;
 import lombok.Getter;
 
 // 不同玩家收到的数据是不同的，但大部分相同
@@ -32,7 +39,7 @@ public class Server {
     private Loader loader;
     @Getter
     private World world;
-    private ScheduledFuture publishTask;
+    private ScheduledFuture<?> publishTask;
     private List<Channel> channels = new LinkedList<>();
 
     public Server(Loader loader) throws IOException{
@@ -97,6 +104,14 @@ public class Server {
 
                     channels.add(client);
                     players.add(player);
+
+                    // Call every player send a new player list
+                    List<Pair<String, EntityType>> list = new ArrayList<>();
+                    for(Player p : players)
+                        list.add(new Pair<>(p.getName(), p.getCalabashType()));
+
+                    for(Player p : players)
+                        p.sendPlayerList(list);
                 }
 
                 if(key.isReadable()){

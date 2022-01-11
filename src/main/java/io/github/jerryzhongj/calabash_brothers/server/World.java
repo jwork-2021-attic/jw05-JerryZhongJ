@@ -21,6 +21,7 @@ import io.github.jerryzhongj.calabash_brothers.EntityType;
 import io.github.jerryzhongj.calabash_brothers.Loader;
 import io.github.jerryzhongj.calabash_brothers.Settings;
 import io.github.jerryzhongj.calabash_brothers.ThreadPool;
+import io.github.jerryzhongj.calabash_brothers.server.CalabashBro.Status;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -376,6 +377,29 @@ public class World implements Serializable{
 
         }, World.UpdateOrder.BASIC);
 
+
+        // Register character moving
+        registerUpdate(new Update(World.UpdateType.INFINTE){
+
+            @Override
+            void update() {
+                    for(CalabashBro bro:livingCalabash){
+                        switch(bro.movingStatus){
+                            case MOVING_LEFT:
+                                setVelocityX(bro, -Settings.DEFAULT_SPEED);
+                                break;
+                            case MOVING_RIGHT:
+                                setVelocityX(bro, Settings.DEFAULT_SPEED);
+                                break;
+                            case INERTIA:
+                                // Then this character should keep his intertia
+                                break;
+                        }
+                    }
+                
+            }
+
+        }, World.UpdateOrder.CALABASH_ACTION);
         // register collision check
         registerUpdate(new Update(World.UpdateType.INFINTE){
 
@@ -386,14 +410,13 @@ public class World implements Serializable{
                 do{
                     collideEntities.clear();
 
-                    // We assume that last state is valid, then all the collisions are caused by enitities which change their positions.
                     for(Entity candidate : newPositions.keySet()){
                         if(!(candidate instanceof MovableEntity))
                             continue;
                         // Removed entities will not be considered.
                         if(removedEntities.contains(candidate))
                             continue;
-
+                        MovableEntity me = (MovableEntity)candidate;
                         Position pos = newPositions.get(candidate);
                         Velocity v = newVelocities.get(candidate);
                         if(v == null)
@@ -402,20 +425,32 @@ public class World implements Serializable{
                         //T B R L
                         int collision = getCollision(candidate, pos);
                         boolean reset = false;
+
+                        double fraction = Settings.FRACTION / Settings.UPDATE_RATE;
+                        double yAfterFraction = (Math.abs(v.vy) - fraction > 0? Math.abs(v.vy) - fraction : 0) * (v.vy > 0?1:-1);
+                        double xAfterFraction = (Math.abs(v.vx) - fraction > 0? Math.abs(v.vx) - fraction : 0) * (v.vx > 0?1:-1);
                         if((collision & 1) != 0 && v.vx < 0){
-                            setVelocityX((MovableEntity)candidate, 0);
+                            setVelocity(me, new Velocity(0, yAfterFraction));
                             reset = true;
                         }
                         if((collision & 2) != 0 && v.vx > 0){
-                            setVelocityX((MovableEntity)candidate, 0);
+                            setVelocity(me, new Velocity(0, yAfterFraction));
                             reset = true;
                         }
+
+                        // If character is running, then there is no fraction effect.
                         if((collision & 4) != 0 && v.vy < 0){
-                            setVelocityY((MovableEntity)candidate, 0);
+                            if(me instanceof CalabashBro && ((CalabashBro)me).movingStatus != Status.INERTIA)
+                                setVelocityY(me, 0);
+                            else
+                                setVelocity(me, new Velocity(xAfterFraction, 0));
                             reset = true;
                         }
                         if((collision & 8) != 0 && v.vy > 0){
-                            setVelocityY((MovableEntity)candidate, 0);
+                            if(me instanceof CalabashBro && ((CalabashBro)me).movingStatus != Status.INERTIA)
+                                setVelocityY(me, 0);
+                            else
+                                setVelocity(me, new Velocity(xAfterFraction, 0));
                             reset = true;
                         }
 
@@ -450,7 +485,7 @@ public class World implements Serializable{
     public void setMap(String entityName, double x, double y){
         Position pos = new Position(x, y);
         switch(entityName){
-            case "Concrete":
+            case "Earth":
                 positions.put(new Earth(this), pos);
                 break;
             case "Vertical Boundary":
@@ -459,6 +494,7 @@ public class World implements Serializable{
             case "Horizontal Boundary":
                 positions.put(new HorizontalBoundary(this), pos);
                 break;
+            // TODO: more types
         }
         
     }
@@ -479,6 +515,7 @@ public class World implements Serializable{
                 break;
             case CALABASH_BRO_III:
                 bro = new CalabashBroIII(this, name);
+                break;
             default:
                 return;
         }
@@ -793,6 +830,7 @@ public class World implements Serializable{
         for(CalabashBro bro:livingCalabash){
             snapshot.hps.put(bro, bro.getHp());
             snapshot.mps.put(bro, bro.getMp());
+            snapshot.facings.put(bro, bro.isFacingRight());
         }
 
         if(livingCalabash.size() == 1)

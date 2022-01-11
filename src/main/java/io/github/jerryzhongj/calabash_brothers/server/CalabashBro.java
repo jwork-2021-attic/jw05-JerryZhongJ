@@ -14,14 +14,25 @@ public abstract class CalabashBro extends MovableEntity{
     protected double hp = Settings.MAX_HP;
     @Getter
     protected double mp = 0;
+    @Getter
     protected double speed = Settings.DEFAULT_SPEED;
+    @Getter
     protected double buff = 1;
+    @Getter
     protected double protectFactor = 1;
     // facing left(false) or right(true)
-    protected boolean facing = false;
+    @Getter
+    protected boolean facingRight = false;
+    @Getter
     protected boolean superMode = false;
     @Getter
     protected String name;
+    // None doesn't mean stand still, but means character is not trying to move.
+    public enum Status{
+        INERTIA, MOVING_LEFT, MOVING_RIGHT
+    }
+    @Getter
+    protected Status movingStatus = Status.INERTIA;
     CalabashBro(World world, EntityType type, String name, double width, double height) {
         super(world, type, width, height);
         this.name = name;
@@ -51,7 +62,7 @@ public abstract class CalabashBro extends MovableEntity{
     }
     // for Controller
     public void punch(){
-        final boolean facing = this.facing;
+        final boolean facing = this.facingRight;
         Set<Entity> entities = world.getEntityAround(this, position -> {
             double x = position.x * ( facing ? 1 : -1 );
             double y = position.y;
@@ -77,25 +88,13 @@ public abstract class CalabashBro extends MovableEntity{
     }
 
     public void moveLeft(){
-        facing = false;
-        world.registerUpdate(world.new Update(World.UpdateType.ONESHOT) {
-            @Override
-            void update() {
-                setVelocityX(CalabashBro.this, -speed);
-            }
-            
-        }, World.UpdateOrder.CALABASH_ACTION);
+        facingRight = false;
+        movingStatus = Status.MOVING_LEFT;
     }
 
     public void moveRight(){
-        facing = true;
-        world.registerUpdate(world.new Update(World.UpdateType.ONESHOT) {
-            @Override
-            void update() {
-                setVelocityX(CalabashBro.this, speed);
-            }
-            
-        }, World.UpdateOrder.CALABASH_ACTION);
+        facingRight = true;
+        movingStatus = Status.MOVING_RIGHT;
     }
 
     public void jump(){
@@ -109,6 +108,10 @@ public abstract class CalabashBro extends MovableEntity{
     }
 
     public void stop(){
+        // Character is then not trying to move.
+        movingStatus = Status.INERTIA;
+
+        // And stop explcitly.
         world.registerUpdate(world.new Update(World.UpdateType.ONESHOT) {
             @Override
             void update() {
