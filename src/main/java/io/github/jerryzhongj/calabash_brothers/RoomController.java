@@ -80,9 +80,14 @@ public class RoomController {
                 byte command = inputStream.readByte();
                 if(command == ResponseProtocol.PLAYER_LIST){
                     int len = inputStream.readInt();
-                    List<Pair<String, EntityType>> list = new ArrayList<>();
-                    for(int i = 0;i < len;i++){
-                        list.add(new Pair(readString(inputStream), EntityType.getType(inputStream.readInt())));
+                    // System.out.println("Receive " + len);
+                    startGameButton.setDisable(!backEnd.serverIsOn() || len < 2);
+                    Pair<String, EntityType>[] list = new Pair[len];
+                   for(int i = 0;i < len;i++){
+                        String name = readString(inputStream);
+                        EntityType calabashType = EntityType.getType(inputStream.readInt());
+                        // System.out.printf("%s %s\n",name,calabashType.getName());
+                        list[i] = new Pair<String, EntityType>(name, calabashType);
                     }
                     Platform.runLater(()->{
                         playerList.getChildren().clear();

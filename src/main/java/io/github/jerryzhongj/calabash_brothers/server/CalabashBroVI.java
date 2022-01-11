@@ -5,23 +5,16 @@ import lombok.Getter;
 
 public class CalabashBroVI extends CalabashBro{
     
-    @Getter
-    private boolean invisible = false;
+
     
     public CalabashBroVI(World world, String name) {
-        super(world, EntityType.CALABASH_BRO_III,name, world.getLoader().loadEntityWidth(EntityType.CALABASH_BRO_VI), world.getLoader().loadEntityHeight(EntityType.CALABASH_BRO_VI));
+        super(world, EntityType.CALABASH_BRO_VI,name, world.getLoader().loadEntityWidth(EntityType.CALABASH_BRO_VI), world.getLoader().loadEntityHeight(EntityType.CALABASH_BRO_VI));
     }
 
-    @Override
-    public void superMode() {
-        // TODO Auto-generated method stub
-        
+    public boolean isInvisible(){
+        return superMode;
     }
 
-    @Override
-    public void stopSuperMode() {
-        // TODO Auto-generated method stub
-        
-    }
+    
     
 }

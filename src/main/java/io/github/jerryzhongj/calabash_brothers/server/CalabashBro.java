@@ -1,9 +1,11 @@
 package io.github.jerryzhongj.calabash_brothers.server;
 
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import io.github.jerryzhongj.calabash_brothers.EntityType;
 import io.github.jerryzhongj.calabash_brothers.Settings;
+import io.github.jerryzhongj.calabash_brothers.ThreadPool;
 import io.github.jerryzhongj.calabash_brothers.server.World.UpdateOrder;
 import io.github.jerryzhongj.calabash_brothers.server.World.UpdateType;
 import lombok.Getter;
@@ -14,12 +16,6 @@ public abstract class CalabashBro extends MovableEntity{
     protected double hp = Settings.MAX_HP;
     @Getter
     protected double mp = 0;
-    @Getter
-    protected double speed = Settings.DEFAULT_SPEED;
-    @Getter
-    protected double buff = 1;
-    @Getter
-    protected double protectFactor = 1;
     // facing left(false) or right(true)
     @Getter
     protected boolean facingRight = false;
@@ -36,15 +32,40 @@ public abstract class CalabashBro extends MovableEntity{
     CalabashBro(World world, EntityType type, String name, double width, double height) {
         super(world, type, width, height);
         this.name = name;
+
+        ThreadPool.scheduled.scheduleAtFixedRate(()->{
+            synchronized(this){
+                mp += Settings.MP_GROW_PER_SENCOND;
+                if(mp >= Settings.MAX_MP)
+                    mp = Settings.MAX_MP;
+            }
+        }, 0, 1000, TimeUnit.MILLISECONDS);
     }
 
-    private double getDamage(){
-        return Settings.DEFAULT_DAMAGE * buff;
+    // Can be customized
+    protected double getDamage(){
+        return Settings.DEFAULT_DAMAGE;
+    }
+
+    protected double getProtect(){
+        return 1.0;
+    }
+
+    protected double getSpeed(){
+        return Settings.DEFAULT_SPEED;
+    }
+
+    protected long getSuperModeTime(){
+        return Settings.DEFAULT_SUPER_TIME;
+    }
+
+    protected double getMpCost(){
+        return Settings.DEFAULT_MP_COST;
     }
 
     // for World
-    synchronized public void hurt(double damage){
-        hp -= damage * protectFactor;
+    public synchronized void hurt(double damage){
+        hp -= damage * getProtect();
         if(hp <= 0){
             // TODO: add corpe
             world.registerUpdate(world.new Update(UpdateType.ONESHOT){
@@ -60,6 +81,7 @@ public abstract class CalabashBro extends MovableEntity{
     public boolean isAlive(){
         return hp > 0;
     }
+
     // for Controller
     public void punch(){
         final boolean facing = this.facingRight;
@@ -101,7 +123,7 @@ public abstract class CalabashBro extends MovableEntity{
         world.registerUpdate(world.new Update(World.UpdateType.ONESHOT) {
             @Override
             void update() {
-                setVelocityY(CalabashBro.this, speed);
+                setVelocityY(CalabashBro.this, getSpeed());
             }
             
         }, World.UpdateOrder.CALABASH_ACTION);
@@ -121,7 +143,16 @@ public abstract class CalabashBro extends MovableEntity{
         }, World.UpdateOrder.CALABASH_ACTION);
     }
 
-    abstract public void superMode();
-    abstract public void stopSuperMode();
+    public synchronized void superMode(){
+        if(superMode == true || mp < getMpCost())
+            return;
+
+        superMode = true;
+        mp -= getMpCost();
+        ThreadPool.scheduled.schedule(()->{
+            superMode = false;
+        }, getSuperModeTime(), TimeUnit.MILLISECONDS);
+    }
+    
 
 }

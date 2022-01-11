@@ -11,28 +11,15 @@ public class CalabashBroIII extends CalabashBro{
     public CalabashBroIII(World world, String name) {
         super(world, EntityType.CALABASH_BRO_III, name, world.getLoader().loadEntityWidth(EntityType.CALABASH_BRO_III), world.getLoader().loadEntityHeight(EntityType.CALABASH_BRO_III));
 
-        protectFactor = Settings.CALABASH_III_INITIAL_PROTECT;
-    }
-
-    @Override
-    synchronized public void superMode() {
-        if(superMode == true)
-            return;
-
-        superMode = true;
-        protectFactor = Settings.CALABASH_III_SUPER_PROTECT;
-
-        ThreadPool.scheduled.schedule(()->{
-            superMode = false;
-            protectFactor = Settings.CALABASH_III_INITIAL_PROTECT;
-        }, Settings.SUPER_TIME_LIMIT, TimeUnit.MILLISECONDS);
         
     }
 
     @Override
-    public void stopSuperMode() {
-        ;
-        
+    protected double getProtect(){
+        if(superMode)
+            return Settings.CALABASH_III_SUPER_PROTECT;
+        else
+            return Settings.CALABASH_III_PROTECT;
     }
     
 }

@@ -3,13 +3,11 @@ package io.github.jerryzhongj.calabash_brothers;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-import io.github.jerryzhongj.calabash_brothers.server.Server;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.TextField;
 import lombok.Getter;
-import lombok.Setter;
 
 public class PlayerInfoController {
     @Getter
@@ -64,7 +62,7 @@ public class PlayerInfoController {
             case "六娃":
                 calabashType = EntityType.CALABASH_BRO_VI;
                 break;
-            case "一七娃":
+            case "七娃":
                 calabashType = EntityType.CALABASH_BRO_VII;
                 break;
             default:

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.text.Font?>
+<?import javafx.scene.text.Text?>
+
+
+<HBox alignment="CENTER" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="800.0" prefWidth="1000.0" spacing="20.0" style="-fx-background-image: url(&quot;/Backgrounds/menu.jpeg&quot;); -fx-background-size: 100% 100%;" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1">
+   <children>
+      <Text stroke="#ababab" strokeType="OUTSIDE" strokeWidth="3.0" text="胜者是">
+         <font>
+            <Font name="Source Han Sans CN" size="48.0" />
+         </font>
+      </Text>
+      <Text fx:id="name" stroke="#ababab" strokeType="OUTSIDE" strokeWidth="3.0" text="胜者是">
+         <font>
+            <Font name="Source Han Sans CN" size="48.0" />
+         </font>
+      </Text>
+   </children>
+</HBox>

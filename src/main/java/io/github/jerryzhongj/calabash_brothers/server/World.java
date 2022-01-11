@@ -513,8 +513,17 @@ public class World implements Serializable{
             case CALABASH_BRO_I:
                 bro = new CalabashBroI(this, name);
                 break;
+            case CALABASH_BRO_II:
+                bro = new CalabashBroII(this, name);
+                break;
             case CALABASH_BRO_III:
                 bro = new CalabashBroIII(this, name);
+                break;
+            case CALABASH_BRO_VI:
+                bro = new CalabashBroVI(this, name);
+                break;
+            case CALABASH_BRO_VII:
+                bro = new CalabashBroVII(this, name);
                 break;
             default:
                 return;
@@ -775,22 +784,22 @@ public class World implements Serializable{
 
     /**
      * 
-     * @param e get enities around whom
+     * @param calabashBro get enities around whom
      * @param condition in what area
      * @return
      */
-    public Set<Entity> getEntityAround(Entity e, Predicate<Position> condition){
+    public Set<Entity> getEntityAround(CalabashBro calabashBro, Predicate<Position> condition){
         Position ePos = null;
         Set<Entity> result = new HashSet<>();
         try{
             stateLock.readLock().lock();
-            ePos = positions.get(e);
+            ePos = positions.get(calabashBro);
 
             if(ePos != null){
                 for(Map.Entry<Entity, Position> entry : positions.entrySet()){
                     Position pos = entry.getValue();
                     Entity entity = entry.getKey();
-                    if(entity != e && condition.test(new Position(pos.x - ePos.x, pos.y - ePos.y))){
+                    if(entity != calabashBro && condition.test(new Position(pos.x - ePos.x, pos.y - ePos.y))){
                         result.add(entry.getKey());
                     }
                 }
@@ -828,9 +837,7 @@ public class World implements Serializable{
         }
         
         for(CalabashBro bro:livingCalabash){
-            snapshot.hps.put(bro, bro.getHp());
-            snapshot.mps.put(bro, bro.getMp());
-            snapshot.facings.put(bro, bro.isFacingRight());
+            snapshot.calabashes.put(bro,  new SnapShot.CalabashStatus(bro.getHp(), bro.getMp(), bro.isFacingRight(), bro.isSuperMode()));
         }
 
         if(livingCalabash.size() == 1)

@@ -5,24 +5,23 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-
 <StackPane prefHeight="800.0" prefWidth="1000.0" style="-fx-background-image: url(&quot;/Backgrounds/menu.jpeg&quot;); -fx-background-size: 100% 100%;" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1">
    <children>
       <VBox alignment="CENTER" spacing="50.0">
          <children>
             <Button mnemonicParsing="false" onAction="#createRoom" prefWidth="150.0" text="创建房间">
                <font>
-                  <Font size="24.0" />
+                  <Font name="Source Han Sans CN" size="24.0" />
                </font>
             </Button>
             <Button mnemonicParsing="false" onAction="#joinRoom" prefWidth="150.0" text="加入房间">
                <font>
-                  <Font size="24.0" />
+                  <Font name="Source Han Sans CN" size="24.0" />
                </font>
             </Button>
             <Button mnemonicParsing="false" onAction="#quitGame" prefWidth="150.0" text="退出游戏">
                <font>
-                  <Font size="24.0" />
+                  <Font name="Source Han Sans CN" size="24.0" />
                </font>
             </Button>
          </children>

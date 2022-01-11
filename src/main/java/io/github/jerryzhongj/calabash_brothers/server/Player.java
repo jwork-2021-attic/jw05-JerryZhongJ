@@ -6,7 +6,6 @@ import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
@@ -14,6 +13,8 @@ import java.util.concurrent.Flow.Subscription;
 import io.github.jerryzhongj.calabash_brothers.EntityType;
 import io.github.jerryzhongj.calabash_brothers.RequestProtocol;
 import io.github.jerryzhongj.calabash_brothers.ResponseProtocol;
+import io.github.jerryzhongj.calabash_brothers.ThreadPool;
+import io.github.jerryzhongj.calabash_brothers.server.SnapShot.CalabashStatus;
 import io.github.jerryzhongj.calabash_brothers.server.World.Position;
 import javafx.util.Pair;
 import lombok.Getter;
@@ -27,21 +28,29 @@ public class Player implements Subscriber<SnapShot>{
     private String name;
     @Getter
     private CalabashBro calabash = null;
+    @Getter
+    private SocketChannel client;
+    @Getter
+    private boolean online;
 
     private ByteBuffer readBuffer = ByteBuffer.allocate(1024);
     private ByteBuffer writeBuffer = ByteBuffer.allocate(1024);
 
     
     private boolean firstReponse = true;
+    public Player(SocketChannel client){
+        this.client = client;
+        online = true;
+    }
 
-    void read(SocketChannel client){
+    void read(){
         try {
             client.read(readBuffer);
             readBuffer.flip();
 
             readBuffer.mark();
-            while(true){
-                try{
+            try{
+                while(true){
                     byte command = readBuffer.get();
                     // System.out.printf("%s get command %h\n", name, command);
                     switch(command){
@@ -82,36 +91,42 @@ public class Player implements Subscriber<SnapShot>{
                             if(calabash != null && calabash.isAlive())
                                 calabash.superMode();
                             break;
-                        case RequestProtocol.STOP_SUPER_MODE:
-                            if(calabash != null && calabash.isAlive())
-                                calabash.stopSuperMode();
-                            break;
                     }
-                }catch(BufferUnderflowException e){
-                    readBuffer.reset();
-                    break;
-                }
+                
                 // Mark when a whole command complete
                 readBuffer.mark();
+               }
+            }catch(BufferUnderflowException e){
+                readBuffer.reset();
             }
-            
+            readBuffer.compact();
         } catch (IOException e) {
             e.printStackTrace();
-            System.exit(1);
-        }finally{
-            readBuffer.compact();
+            online = false;
+            System.out.println(name + " disconnect.");
+            try {
+                client.close();
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
         }
+        
     }
     
-    void write(SocketChannel client){
+    public void write(){
         synchronized(writeBuffer){
-            
             try {
                 writeBuffer.flip();
                 client.write(writeBuffer);
             } catch (IOException e) {
                 e.printStackTrace();
-                System.exit(0);
+                online = false;
+                System.out.println(name + " disconnect.");
+                try {
+                    client.close();
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
             }finally{
                 writeBuffer.compact();
                 writeBuffer.notifyAll();
@@ -131,78 +146,71 @@ public class Player implements Subscriber<SnapShot>{
     }
 
     private void writeBuffer(byte b) throws InterruptedException{
-        synchronized(writeBuffer){
-            while(true){
-                try{
-                    writeBuffer.put(b);
-                    break;
-                }catch(BufferOverflowException e){
-                    writeBuffer.wait();
-                }
+        while(true){
+            try{
+                writeBuffer.put(b);
+                break;
+            }catch(BufferOverflowException e){
+                writeBuffer.wait();
             }
-            
-        }
+        }   
     }
 
     private void writeBuffer(int i) throws InterruptedException{
-        synchronized(writeBuffer){
-            while(true){
-                try{
-                    writeBuffer.putInt(i);
-                    break;
-                }catch(BufferOverflowException e){
-                    writeBuffer.wait();
-                }
+        
+        while(true){
+            try{
+                writeBuffer.putInt(i);
+                break;
+            }catch(BufferOverflowException e){
+                writeBuffer.wait();
             }
-            
         }
+            
     }
 
     private void writeBuffer(double d) throws InterruptedException{
-        synchronized(writeBuffer){
-            while(true){
-                try{
-                    writeBuffer.putDouble(d);
-                    break;
-                }catch(BufferOverflowException e){
-                    writeBuffer.wait();
-                }
+        
+        while(true){
+            try{
+                writeBuffer.putDouble(d);
+                break;
+            }catch(BufferOverflowException e){
+                writeBuffer.wait();
             }
-            
         }
+            
     }
 
     private void writeBuffer(String s) throws InterruptedException{
         byte[] str = s.getBytes();
-        synchronized(writeBuffer){
-            writeBuffer(str.length);
-            for(int i = 0;i < str.length;){
-                try{
-                    writeBuffer.put(str[i]);
-                    i++;
-                }catch(BufferOverflowException e){
-                    writeBuffer.wait();
-                }   
-            }
+    
+        writeBuffer(str.length);
+        for(int i = 0;i < str.length;){
+            try{
+                writeBuffer.put(str[i]);
+                i++;
+            }catch(BufferOverflowException e){
+                writeBuffer.wait();
+            }   
         }
+        
     }
 
     private void writeBuffer(boolean b) throws InterruptedException{
-        synchronized(writeBuffer){
-            while(true){
-                try{
-                    writeBuffer.putInt(b ? 1 : 0);
-                    break;
-                }catch(BufferOverflowException e){
-                    writeBuffer.wait();
-                }
+        while(true){
+            try{
+                writeBuffer.putInt(b ? 1 : 0);
+                break;
+            }catch(BufferOverflowException e){
+                writeBuffer.wait();
             }
-            
         }
+            
     }
 
     boolean isReady(){
-        return name != null && calabashType != null;
+        return online && name != null && calabashType != null;
     }
 
     void control(CalabashBro calabash){
@@ -226,10 +234,8 @@ public class Player implements Subscriber<SnapShot>{
     @Override
     public void onNext(SnapShot item) {
         
-        Map<Entity, World.Position> positions = new HashMap<>(item.positions);;
-        Map<CalabashBro, Double> hps = new HashMap<>(item.hps);
-        Map<CalabashBro, Double> mps = new HashMap<>(item.mps);
-        Map<CalabashBro, Boolean> facings = new HashMap<>(item.facings);
+        Map<Entity, World.Position> positions = new HashMap<>(item.positions);
+        Map<CalabashBro, CalabashStatus> calabashes = new HashMap<>(item.calabashes);
         double width = item.width;
         double height = item.height;
         String background = item.background;
@@ -241,136 +247,131 @@ public class Player implements Subscriber<SnapShot>{
                 CalabashBroVI bro6 = (CalabashBroVI)e;
                 if(bro6.isInvisible() && bro6 != calabash){
                     positions.remove(bro6);
-                    hps.remove(bro6);
-                    mps.remove(bro6);
+                    calabashes.remove(bro6);
                 }
+            }
+        }
+        synchronized(writeBuffer){
+            try{
+                // Start to write
+                if(firstReponse)
+                    writeBuffer(ResponseProtocol.START_GAME);
+                
+                // SET width height
+                if(Math.abs(oldSnapShot.width - width) > 0.5 || Math.abs(oldSnapShot.height - height) > 0.5){
+                    writeBuffer(ResponseProtocol.SET_SIZE);
+                    writeBuffer(width);
+                    writeBuffer(height);
+                }else{
+                    height = oldSnapShot.height;
+                    width = oldSnapShot.width;
+                }
+    
+                // SET_BACKGROUND
+                if(!background.equals(oldSnapShot.background)){
+                    writeBuffer(ResponseProtocol.SET_BACKGROUND);
+                    writeBuffer(background);
+                }
+    
+                // ADD and SET
+                for(Map.Entry<Entity, World.Position> entry : positions.entrySet()){
+                    Entity e = entry.getKey();
+                
+                    Position pos = entry.getValue();
+                    Position oldPos = oldSnapShot.positions.get(e);
                     
+                    if(oldPos == null){
+                        writeBuffer(ResponseProtocol.ADD);
+                        writeBuffer(e.hashCode());
+                        writeBuffer(e.getType().getCode());
+                    }
+    
+                    if(oldPos == null || Math.abs(oldPos.x - pos.x) > 0.5 || Math.abs(oldPos.y - pos.y) > 0.5){
+                        writeBuffer(ResponseProtocol.SET_POS);
+                        writeBuffer(e.hashCode());
+                        writeBuffer(pos.x);
+                        writeBuffer(pos.y);
+    
+                    }else{
+                        entry.setValue(oldPos);
+                    }
+    
+                    // for CLEAR
+                    oldSnapShot.positions.remove(e);
+                }
+    
+                // CLEAR 
+                for(Map.Entry<Entity, World.Position> entry : oldSnapShot.positions.entrySet()){
+                    writeBuffer(ResponseProtocol.CLEAR);
+                    writeBuffer(entry.getKey().hashCode());
+                }
+    
+                // SET HP
+                for(Map.Entry<CalabashBro, CalabashStatus> entry : calabashes.entrySet()){
+                    CalabashBro bro = entry.getKey();
+                    CalabashStatus status = entry.getValue();
+                    CalabashStatus oldStatus = oldSnapShot.calabashes.get(bro);
+
+                    if(oldStatus == null || Math.abs(status.hp - oldStatus.hp) > 0.1){
+                        writeBuffer(ResponseProtocol.SET_HP);
+                        writeBuffer(bro.hashCode());
+                        writeBuffer(status.hp);
+                    }else{
+                        status.hp = oldStatus.hp;
+                    }
+
+                    if(oldStatus == null || Math.abs(status.mp - oldStatus.mp) > 0.1){
+                        writeBuffer(ResponseProtocol.SET_MP);
+                        writeBuffer(bro.hashCode());
+                        writeBuffer(status.mp);
+                    }else{
+                        status.mp = oldStatus.mp;
+                    }
+
+                    if(oldStatus == null || oldStatus.facingRight != status.facingRight){
+                        writeBuffer(ResponseProtocol.SET_FACING);
+                        writeBuffer(bro.hashCode());
+                        writeBuffer(status.facingRight);
+                    }
+
+                    if(oldStatus == null || oldStatus.superMode != status.superMode){
+                        writeBuffer(ResponseProtocol.SET_SUPERMODE);
+                        writeBuffer(bro.hashCode());
+                        writeBuffer(status.superMode);
+                    }
+                }
+    
+                
+    
+                if(firstReponse){
+                    writeBuffer(ResponseProtocol.ANCHOR);
+                    writeBuffer(calabash.hashCode());
+                    for(CalabashBro bro : calabashes.keySet()){
+                        writeBuffer(ResponseProtocol.SET_NAME);
+                        writeBuffer(bro.hashCode());
+                        writeBuffer(bro.getName());
+                    }
+                    firstReponse = false;
+                }
+    
+                if(!calabash.isAlive())
+                    writeBuffer(ResponseProtocol.LOSE);
+    
+                // WINNER
+                if(item.winner != null){
+                    writeBuffer(ResponseProtocol.WINNER);
+                    writeBuffer(item.winner);
+                }
+            }catch(InterruptedException e){
+                e.printStackTrace();
+                return;
             }
         }
-
-        try{
-            // Start to write
-
-            if(firstReponse)
-                writeBuffer(ResponseProtocol.START_GAME);
-            
-            // SET width height
-            if(Math.abs(oldSnapShot.width - width) > 0.5 || Math.abs(oldSnapShot.height - height) > 0.5){
-                writeBuffer(ResponseProtocol.SET_SIZE);
-                writeBuffer(width);
-                writeBuffer(height);
-            }else{
-                height = oldSnapShot.height;
-                width = oldSnapShot.width;
-            }
-
-            // SET_BACKGROUND
-            if(!background.equals(oldSnapShot.background)){
-                writeBuffer(ResponseProtocol.SET_BACKGROUND);
-                writeBuffer(background);
-            }
-
-            // ADD and SET
-            for(Map.Entry<Entity, World.Position> entry : positions.entrySet()){
-                Entity e = entry.getKey();
-            
-                Position pos = entry.getValue();
-                Position oldPos = oldSnapShot.positions.get(e);
-                
-                if(oldPos == null){
-                    writeBuffer(ResponseProtocol.ADD);
-                    writeBuffer(e.hashCode());
-                    writeBuffer(e.getType().getCode());
-                }
-
-                if(oldPos == null || Math.abs(oldPos.x - pos.x) > 0.5 || Math.abs(oldPos.y - pos.y) > 0.5){
-                    writeBuffer(ResponseProtocol.SET_POS);
-                    writeBuffer(e.hashCode());
-                    writeBuffer(pos.x);
-                    writeBuffer(pos.y);
-
-                }else{
-                    entry.setValue(oldPos);
-                }
-
-                // for CLEAR
-                oldSnapShot.positions.remove(e);
-            }
-
-            // CLEAR 
-            for(Map.Entry<Entity, World.Position> entry : oldSnapShot.positions.entrySet()){
-                writeBuffer(ResponseProtocol.CLEAR);
-                writeBuffer(entry.getKey().hashCode());
-            }
-
-            // SET HP
-            for(Map.Entry<CalabashBro, Double> entry : hps.entrySet()){
-                CalabashBro bro = entry.getKey();
-                double hp = entry.getValue();
-                Double oldHp = oldSnapShot.hps.get(bro);
-                if(oldHp == null || Math.abs(hp - oldHp) > 0.1){
-                    writeBuffer(ResponseProtocol.SET_HP);
-                    writeBuffer(bro.hashCode());
-                    writeBuffer(hp);
-                }else{
-                    entry.setValue(oldHp);
-                }
-                
-            }
-
-            // SET MP
-            for(Map.Entry<CalabashBro, Double> entry : mps.entrySet()){
-                CalabashBro bro = entry.getKey();
-                double mp = entry.getValue();
-                Double oldMp = oldSnapShot.mps.get(bro);
-                if(oldMp == null || Math.abs(mp - oldMp) > 0.1){
-                    writeBuffer(ResponseProtocol.SET_MP);
-                    writeBuffer(bro.hashCode());
-                    writeBuffer(mp);
-                }else{
-                    entry.setValue(oldMp);
-                }
-            }
-
-            //SET FACING
-            for(Map.Entry<CalabashBro, Boolean> entry : facings.entrySet()){
-                CalabashBro bro = entry.getKey();
-                boolean facing = entry.getValue();
-                Boolean oldFacing = oldSnapShot.facings.get(bro);
-                if(oldFacing == null || facing != oldFacing){
-                    writeBuffer(ResponseProtocol.SET_FACING);
-                    writeBuffer(bro.hashCode());
-                    writeBuffer(facing);
-                }
-            }
-
-            if(firstReponse){
-                writeBuffer(ResponseProtocol.ANCHOR);
-                writeBuffer(calabash.hashCode());
-                for(CalabashBro bro : hps.keySet()){
-                    writeBuffer(ResponseProtocol.SET_NAME);
-                    writeBuffer(bro.hashCode());
-                    writeBuffer(bro.getName());
-                }
-                firstReponse = false;
-            }
-
-            if(!calabash.isAlive())
-                writeBuffer(ResponseProtocol.LOSE);
-
-            // WINNER
-            if(item.winner != null){
-                writeBuffer(ResponseProtocol.WINNER);
-                writeBuffer(item.winner);
-            }
-        }catch(InterruptedException e){
-            e.printStackTrace();
-            return;
-        }
+        
         
 
         // Save old snapshot
-        oldSnapShot = new SnapShot(width, height, background, positions, hps, mps, facings);
+        oldSnapShot = new SnapShot(width, height, background, positions, calabashes);
         
         subscription.request(1);
     }
@@ -382,20 +383,24 @@ public class Player implements Subscriber<SnapShot>{
         
     }
 
-    public void sendPlayerList(List<Pair<String, EntityType>> list){
-        try {
-            writeBuffer(ResponseProtocol.PLAYER_LIST);
-            writeBuffer(list.size());
-            for(Pair<String, EntityType> pair : list){
-                writeBuffer(pair.getKey());
-                writeBuffer(pair.getValue().getCode());
+    public void sendPlayerList(Pair<String, EntityType>[] list){
+        // Should not block!
+        ThreadPool.nonScheduled.submit(()->{
+           synchronized(writeBuffer){
+            try {
+                writeBuffer(ResponseProtocol.PLAYER_LIST);
+                writeBuffer(list.length);
+                for(Pair<String, EntityType> pair : list){
+                    writeBuffer(pair.getKey());
+                    writeBuffer(pair.getValue().getCode());
+                }
+            } catch (InterruptedException e) {
+                
+                e.printStackTrace();
+                return;
             }
-        } catch (InterruptedException e) {
-            
-            e.printStackTrace();
-            return;
-        }
-
+           } 
+        });
     }
 
 }

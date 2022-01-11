@@ -17,7 +17,7 @@
       <ImageView fx:id="imgView" fitWidth="105.0" pickOnBounds="true" preserveRatio="true" />
       <Text fx:id="name" fill="#292929" stroke="#fffbfb" strokeLineCap="ROUND" strokeType="OUTSIDE" text="Name">
          <font>
-            <Font name="System Bold" size="20.0" />
+            <Font name="Source Han Sans CN" size="20.0" />
          </font>
       </Text>
    </children>

@@ -3,8 +3,6 @@ package io.github.jerryzhongj.calabash_brothers;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Future;
@@ -24,17 +22,15 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
-import javafx.stage.Stage;
 import lombok.Getter;
 
 
 public class Game{
-    private DataInputStream inputStream;
-    private DataOutputStream outputStream;
     @Getter
     private Pane canvas = new Pane();
     private ObservableMap<Integer, Element> elements = FXCollections.observableHashMap();
@@ -74,35 +70,35 @@ public class Game{
                     Element e = change.getValueAdded();
                     String location = "/images/"+e.elementType.getName()+".png";
                     Node node;
-                    switch(e.elementType){
-                        case CALABASH_BRO_I:
-                        case CALABASH_BRO_III:
-                        case CALABASH_BRO_VI:
-                            Character c = (Character)e;
-                            try {
-                                
-                                node = (VBox)FXMLLoader.load(getClass().getResource("/FXML/Character.fxml"));
-                                ImageView imgView = (ImageView)node.lookup("#imgView");
-                                Rectangle hpBar = (Rectangle)node.lookup("#hpBar");
-                                Rectangle mpBar = (Rectangle)node.lookup("#mpBar");
-                                Text name = (Text)node.lookup("#name");
-                                // System.out.println(imgView.getFitWidth());
-                                imgView.setImage(new Image(getClass().getResourceAsStream(location)));
-                                // System.out.println(imgView.getFitWidth());
-                                // imgView.setFitWidth(10);
-                                hpBar.widthProperty().bind(c.hp.divide(Settings.MAX_HP).multiply(Settings.BAR_WIDTH));
-                                mpBar.widthProperty().bind(c.mp.divide(Settings.MAX_HP).multiply(Settings.BAR_WIDTH));
-                                name.textProperty().bind(c.name);
-                                imgView.scaleXProperty().bind(new When(c.facingRight).then(1.0).otherwise(-1.0));
-                            } catch (IOException e1) {
-                                e1.printStackTrace();
-                                return;
-                            }
-                            break;
-                        default:
-                            node = new ImageView(getClass().getResource(location).toString());
-                            break;
+                    if(e instanceof Character){
+                        Character c = (Character)e;
+                        try {
+                            
+                            node = (VBox)FXMLLoader.load(getClass().getResource("/FXML/Character.fxml"));
+                            ImageView imgView = (ImageView)node.lookup("#imgView");
+                            Rectangle hpBar = (Rectangle)node.lookup("#hpBar");
+                            Rectangle mpBar = (Rectangle)node.lookup("#mpBar");
+                            Text name = (Text)node.lookup("#name");
+                            // System.out.println(imgView.getFitWidth());
+                            imgView.setImage(new Image(getClass().getResourceAsStream(location)));
+                            
+                            // System.out.println(imgView.getFitWidth());
+                            // imgView.setFitWidth(10);
+                            hpBar.widthProperty().bind(c.hp.divide(Settings.MAX_HP).multiply(Settings.BAR_WIDTH));
+                            mpBar.widthProperty().bind(c.mp.divide(Settings.MAX_HP).multiply(Settings.BAR_WIDTH));
+                            name.textProperty().bind(c.name);
+                            imgView.scaleXProperty().bind(new When(c.facingRight).then(1.0).otherwise(-1.0));
+                            Image superMode = new Image(getClass().getResourceAsStream("/images/"+e.elementType.getName()+" Super.png"));
+                            Image normal = new Image(getClass().getResourceAsStream("/images/"+e.elementType.getName()+".png"));
+                            imgView.imageProperty().bind(new When(c.superMode).then(superMode).otherwise(normal));
+                        } catch (IOException e1) {
+                            e1.printStackTrace();
+                            return;
+                        }
+                    }else{
+                        node = new ImageView(getClass().getResource(location).toString());
                     }
+                    
                     double offsetX = backEnd.getLoader().loadEntityOffsetX(e.elementType);
                     double offsetY = backEnd.getLoader().loadEntityOffsetY(e.elementType);
 
@@ -123,6 +119,8 @@ public class Game{
 
         // Add key press handler
         canvas.setOnKeyPressed(event->{
+            // System.out.println("pressed");
+            DataOutputStream outputStream = backEnd.getOutput();
             try{
                 switch(event.getCode()){
                     case A:
@@ -144,6 +142,7 @@ public class Game{
         });
 
         canvas.setOnKeyReleased(event->{
+            DataOutputStream outputStream = backEnd.getOutput();
             try{
                 switch(event.getCode()){
                     case A:
@@ -231,7 +230,6 @@ public class Game{
 
         DoubleProperty x = new SimpleDoubleProperty(0);
         DoubleProperty y = new SimpleDoubleProperty(0);
-        BooleanProperty reverse = new SimpleBooleanProperty(false);
         EntityType elementType;
         Node node;
         Element(EntityType type){
@@ -245,6 +243,7 @@ public class Game{
         DoubleProperty hp = new SimpleDoubleProperty();
         DoubleProperty mp = new SimpleDoubleProperty();
         BooleanProperty facingRight = new SimpleBooleanProperty();
+        BooleanProperty superMode = new SimpleBooleanProperty();
         Character(EntityType type) {
             super(type);
         }
@@ -282,8 +281,12 @@ public class Game{
     }
 
     private void receiveData() throws IOException{
-        while(true){
+        DataInputStream inputStream = backEnd.getInput();
+        boolean gameIsOn = true;
+        while(gameIsOn){
+           
             byte command = inputStream.readByte();
+            
             switch(command){
                 case ResponseProtocol.ADD:
                     int id = inputStream.readInt();
@@ -291,9 +294,11 @@ public class Game{
                     
                     Platform.runLater(()->{
                         switch(type){
-                            case CALABASH_BRO_I:    
+                            case CALABASH_BRO_I:   
+                            case CALABASH_BRO_II: 
                             case CALABASH_BRO_III:
                             case CALABASH_BRO_VI:
+                            case CALABASH_BRO_VII:
                                 elements.put(id, new Character(type));
                                 break;
                             default:
@@ -355,6 +360,16 @@ public class Game{
                             ((Character)e).facingRight.set(facing);;    
                     });
                     break;
+                case ResponseProtocol.SET_SUPERMODE:
+                    id = inputStream.readInt();
+                    boolean superMode = (inputStream.readInt() == 1? true:false);
+                    
+                    Platform.runLater(()->{
+                        Element e = elements.get(id);
+                        if(e != null && e instanceof Character)
+                            ((Character)e).superMode.set(superMode);;    
+                    });
+                    break;
                 case ResponseProtocol.CLEAR:
                     id = inputStream.readInt();
                     Platform.runLater(()->{
@@ -388,11 +403,17 @@ public class Game{
                     });
                     break;
                 case ResponseProtocol.WINNER:
-                    //TODO
+                    gameIsOn = false;
+                    HBox winner = FXMLLoader.load(getClass().getResource("/FXML/Winner.fxml"));
+                    Text nameText = (Text) winner.lookup("#name");
+                    nameText.setText(readString(inputStream));
+                    navigator.replace(winner);
                     break;
 
                 case ResponseProtocol.LOSE:
-                    //TODO
+                    gameIsOn = false;
+                    HBox lose = FXMLLoader.load(getClass().getResource("/FXML/Lose.fxml"));
+                    navigator.replace(lose);
                     break;
             }
         }

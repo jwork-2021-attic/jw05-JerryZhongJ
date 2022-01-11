@@ -2,7 +2,6 @@ package io.github.jerryzhongj.calabash_brothers;
 
 import java.io.IOException;
 
-import io.github.jerryzhongj.calabash_brothers.server.Server;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;

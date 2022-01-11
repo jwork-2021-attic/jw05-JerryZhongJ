@@ -36,17 +36,19 @@ public class ResponseProtocol {
     // SET_FACING id facing
     public static final byte SET_FACING = 0xa;
 
+    public static final byte SET_SUPERMODE = 0xb;
+
     // COUNT_DOWN num:byte
-    public static final byte COUNT_DOWN = 0xb;
+    public static final byte COUNT_DOWN = 0xc;
 
     // WINNER byte_len:int name:string
-    public static final byte WINNER = 0xc;
+    public static final byte WINNER = 0xd;
 
-    public static final byte LOSE = 0xd;
+    public static final byte LOSE = 0xe;
 
-    public static final byte WAIT = 0xd;
+    public static final byte WAIT = 0xf;
 
-    public static final byte PLAYER_LIST = 0xe;
+    public static final byte PLAYER_LIST = 0x10;
 
-    public static final byte START_GAME = 0xf;
+    public static final byte START_GAME = 0x11;
 }

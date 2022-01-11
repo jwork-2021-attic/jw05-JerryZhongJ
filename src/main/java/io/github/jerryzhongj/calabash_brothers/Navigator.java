@@ -6,7 +6,6 @@ import java.util.LinkedList;
 import javafx.application.Platform;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import lombok.Getter;
 
 public class Navigator {
     
@@ -20,6 +19,7 @@ public class Navigator {
         else{
             stack.push(scene.getRoot());
             scene.setRoot(parent);
+            parent.requestFocus();
         }
         
     }
@@ -28,15 +28,21 @@ public class Navigator {
         Parent root = stack.pop();
         if(root == null)
             Platform.exit();
-        else
+        else{
             scene.setRoot(root);
+            root.requestFocus();
+        }
+            
     }
 
     public void replace(Parent parent){
         if(scene == null)
             throw new RuntimeException("Please add a initial parent first!");
-        else
+        else{
             scene.setRoot(parent);
+            parent.requestFocus();
+        }
+            
     }
 
     public Scene getScene(){
