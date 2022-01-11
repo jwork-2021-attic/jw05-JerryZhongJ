@@ -3,7 +3,6 @@ package io.github.jerryzhongj.calabash_brothers;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
-import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
 public class Main extends Application{
